@@ -9,6 +9,8 @@ public static class LevelPlaytestBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void CreatePlayer()
     {
+        LevelDoor.PrepareSceneDoors();
+
         if (Object.FindFirstObjectByType<LevelPlaytestController>() != null)
             return;
 
@@ -64,6 +66,6 @@ public static class LevelPlaytestBootstrap
 
         LevelPlaytestController controller = player.AddComponent<LevelPlaytestController>();
         controller.Initialize(cameraToUse, feet, reference.transform.rotation);
-        Debug.Log("Level playtest ready: WASD move, mouse look, Shift sprint, Space jump, R reset, Esc release cursor.", player);
+        Debug.Log("Level playtest ready: WASD move, mouse look, Shift sprint, Space jump, E door, R reset, Esc release cursor.", player);
     }
 }

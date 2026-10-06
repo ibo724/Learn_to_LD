@@ -19,6 +19,7 @@ public sealed class LevelPlaytestController : MonoBehaviour
 
     private CharacterController character;
     private Camera playerCamera;
+    private LevelDoorInteractor doorInteractor;
     private Vector3 spawnPosition;
     private Quaternion spawnRotation;
     private float verticalSpeed;
@@ -58,6 +59,11 @@ public sealed class LevelPlaytestController : MonoBehaviour
         playerCamera.fieldOfView = fieldOfView;
         playerCamera.nearClipPlane = 0.05f;
         playerCamera.enabled = true;
+
+        doorInteractor = GetComponent<LevelDoorInteractor>();
+        if (doorInteractor == null)
+            doorInteractor = gameObject.AddComponent<LevelDoorInteractor>();
+        doorInteractor.Initialize(playerCamera);
 
         ResetToSpawn();
         if (Application.isPlaying)
@@ -106,7 +112,10 @@ public sealed class LevelPlaytestController : MonoBehaviour
         }
 
         skipMouseDelta = false;
+        LevelDoor.SyncMovedColliders();
         MoveCharacter(movement, sprint, jump, Mathf.Min(Time.deltaTime, 0.1f));
+        if (doorInteractor != null && doorInteractor.isActiveAndEnabled)
+            doorInteractor.Tick(controlsActive);
     }
 
     /// <summary>Mouse delta is already per frame, so it is not multiplied by deltaTime.</summary>
@@ -178,6 +187,8 @@ public sealed class LevelPlaytestController : MonoBehaviour
 
     private void OnDisable()
     {
+        if (doorInteractor != null)
+            doorInteractor.Tick(false);
         if (Application.isPlaying)
             ReleaseCursor();
     }
