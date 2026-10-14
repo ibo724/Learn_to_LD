@@ -19,35 +19,53 @@ namespace VillaFPS.Editor
             "VO_Generated_00_CarbineShot", "VO_Generated_01_Reload", "VO_Generated_02_Hurt",
             "VO_Generated_03_DataCollected", "VO_Generated_04_Pickup", "VO_Generated_05_EmptyTrigger",
             "VO_Generated_06_Footstep", "VO_Generated_07_GuardAlert", "VO_Generated_08_Success",
-            "VO_Generated_09_Failure", "VO_Generated_10_HitConfirmation"
+            "VO_Generated_09_Failure", "VO_Generated_10_HitConfirmation", "VO_Generated_11_DoorMechanism",
+            "VO_Generated_12_ReloadReady", "VO_Generated_13_SoftFootstep"
         };
 
-        // Order: shot, reload, hurt, data, pickup, empty, footstep, alert, success, failure, hit.
+        // Order: shot, reload, hurt, data, pickup, empty, hard step, alert, success, failure, hit, door, ready, soft step.
         public static AudioClip[] CreateCues()
         {
             EnsureFolder(AudioFolder);
             AudioClip[] clips = new AudioClip[Names.Length];
-            string root = Directory.GetParent(Application.dataPath).FullName;
             for (int i = 0; i < Names.Length; i++)
             {
-                string path = AudioFolder + "/" + Names[i] + ".wav";
-                string diskPath = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));
-                bool created = false;
-                if (!File.Exists(diskPath))
-                {
-                    float[] samples = Synthesize(i);
-                    FinishSamples(samples);
-                    created = WriteWave(diskPath, samples);
-                }
-
-                if (created || AssetDatabase.LoadAssetAtPath<AudioClip>(path) == null)
-                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
-                ConfigureImporter(path);
-                clips[i] = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
-                if (clips[i] == null)
-                    throw new InvalidOperationException("Generated cue could not be imported: " + path);
+                int cue = i;
+                clips[i] = CreateClip(Names[i], () => Synthesize(cue), false);
             }
             return clips;
+        }
+
+        /// <summary>Order: soft garden wind, quiet pool water. Both are mono seamless loops.</summary>
+        public static AudioClip[] CreateAmbience()
+        {
+            EnsureFolder(AudioFolder);
+            return new[]
+            {
+                CreateClip("VO_Generated_Ambience_GardenWind_Loop", () => AmbienceLoop(false), true),
+                CreateClip("VO_Generated_Ambience_PoolWater_Loop", () => AmbienceLoop(true), true)
+            };
+        }
+
+        private static AudioClip CreateClip(string name, Func<float[]> synthesize, bool loop)
+        {
+            string path = AudioFolder + "/" + name + ".wav";
+            string root = Directory.GetParent(Application.dataPath).FullName;
+            string diskPath = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));
+            bool created = false;
+            if (!File.Exists(diskPath))
+            {
+                float[] samples = synthesize();
+                FinishSamples(samples, loop);
+                created = WriteWave(diskPath, samples);
+            }
+
+            if (created || AssetDatabase.LoadAssetAtPath<AudioClip>(path) == null)
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            ConfigureImporter(path);
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+            if (clip == null) throw new InvalidOperationException("Generated cue could not be imported: " + path);
+            return clip;
         }
 
         private static void EnsureFolder(string path)
@@ -114,6 +132,9 @@ namespace VillaFPS.Editor
                 case 8: return Arpeggio(.72f, new[] { 293.66f, 369.99f, 440f, 587.33f }, .14f, .28f, .30f);
                 case 9: return Arpeggio(.55f, new[] { 440f, 349.23f, 293.66f }, .14f, .26f, .25f);
                 case 10: return HitConfirmation(noise);
+                case 11: return DoorMechanism(noise);
+                case 12: return ReloadReady(noise);
+                case 13: return SoftFootstep(noise);
                 default: throw new ArgumentOutOfRangeException(nameof(cue));
             }
         }
@@ -198,6 +219,24 @@ namespace VillaFPS.Editor
             return samples;
         }
 
+        private static float[] SoftFootstep(Noise noise)
+        {
+            float[] samples = Buffer(.145f);
+            float fast = 0f, slow = 0f;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float t = i / (float)SampleRate;
+                float raw = noise.Next();
+                fast += .20f * (raw - fast);
+                slow += .04f * (raw - slow);
+                float crush = (fast - slow) * Envelope(t, .0025f, .035f) * .36f;
+                float brush = slow * Envelope(t - .025f, .005f, .040f) * .22f;
+                float heel = Mathf.Sin(TwoPi * 92f * t) * Envelope(t, .001f, .018f) * .07f;
+                samples[i] = crush + brush + heel;
+            }
+            return samples;
+        }
+
         private static float[] HitConfirmation(Noise noise)
         {
             float[] samples = Buffer(.075f);
@@ -210,6 +249,72 @@ namespace VillaFPS.Editor
                               Mathf.Sin(TwoPi * 2770f * t) * .08f;
                 samples[i] = metal * Envelope(t, .0012f, .014f) +
                              low * Envelope(t, .0008f, .006f) * .12f;
+            }
+            return samples;
+        }
+
+        private static float[] DoorMechanism(Noise noise)
+        {
+            float[] samples = Buffer(.15f);
+            float low = 0f;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float t = i / (float)SampleRate;
+                float raw = noise.Next();
+                low += .18f * (raw - low);
+                samples[i] = Clink(t - .004f, raw, 1280f, .13f) +
+                             low * Envelope(t - .015f, .008f, .035f) * .28f +
+                             Clink(t - .095f, raw, 880f, .085f);
+            }
+            return samples;
+        }
+
+        private static float[] ReloadReady(Noise noise)
+        {
+            float[] samples = Buffer(.065f);
+            float low = 0f;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float t = i / (float)SampleRate;
+                low += .30f * (noise.Next() - low);
+                float latch = Mathf.Sin(TwoPi * 1180f * t) * .15f + Mathf.Sin(TwoPi * 1740f * t) * .06f;
+                samples[i] = (latch + low * .12f) * Envelope(t, .0008f, .010f);
+            }
+            return samples;
+        }
+
+        private static float[] AmbienceLoop(bool water)
+        {
+            int count = SampleRate * (water ? 8 : 10);
+            float[] raw = new float[count];
+            float[] samples = new float[count];
+            Noise noise = new Noise(water ? 0xA96F73C1u : 0x39CE271Bu);
+            for (int i = 0; i < count; i++) raw[i] = noise.Next();
+
+            float fast = 0f, slow = 0f, broad = 0f;
+            // Repeating the same noise warms the filters to their periodic state before capture.
+            // The final-to-first transition then uses the same filter history as any other sample.
+            for (int pass = 0; pass < 3; pass++)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    fast += (water ? .26f : .08f) * (raw[i] - fast);
+                    slow += (water ? .045f : .012f) * (raw[i] - slow);
+                    broad += .006f * (raw[i] - broad);
+                    if (pass < 2) continue;
+                    float cycle = i / (float)count;
+                    if (water)
+                    {
+                        float lap = .72f + .16f * Mathf.Sin(TwoPi * cycle * 2f) + .12f * Mathf.Sin(TwoPi * cycle * 5f);
+                        float ripple = Mathf.Sin(TwoPi * cycle * 776f + .5f * Mathf.Sin(TwoPi * cycle * 3f)) * .004f;
+                        samples[i] = ((fast - slow) * .12f + broad * .18f) * lap + ripple;
+                    }
+                    else
+                    {
+                        float gust = .72f + .18f * Mathf.Sin(TwoPi * cycle) + .10f * Mathf.Sin(TwoPi * cycle * 3f);
+                        samples[i] = ((fast - slow) * .16f + broad * .20f) * gust;
+                    }
+                }
             }
             return samples;
         }
@@ -262,7 +367,7 @@ namespace VillaFPS.Editor
 
         private static float[] Buffer(float duration) => new float[Mathf.CeilToInt(duration * SampleRate)];
 
-        private static void FinishSamples(float[] samples)
+        private static void FinishSamples(float[] samples, bool loop = false)
         {
             double total = 0;
             for (int i = 0; i < samples.Length; i++) total += samples[i];
@@ -272,7 +377,8 @@ namespace VillaFPS.Editor
             {
                 float time = i / (float)SampleRate;
                 float remaining = (samples.Length - 1 - i) / (float)SampleRate;
-                float fade = Mathf.Clamp01(time / .001f) * Mathf.Clamp01(remaining / .008f);
+                // A periodic loop must not receive an artificial fade/dip at each wrap.
+                float fade = loop ? 1f : Mathf.Clamp01(time / .001f) * Mathf.Clamp01(remaining / .008f);
                 samples[i] = (samples[i] - mean) * fade;
                 peak = Mathf.Max(peak, Mathf.Abs(samples[i]));
             }

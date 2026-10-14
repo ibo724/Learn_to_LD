@@ -15,6 +15,8 @@ namespace VillaFPS.Editor
         private const string MeshFolder = "Assets/_LevelProject/FPS/Meshes";
         private const int WeaponLayer = 11;
 
+        public static Mesh EnvironmentBevelMesh() => GetMesh("BevelBox3D", BevelBox3D);
+
         public static GameObject Weapon(Material dark, Material copper, Material light, Material tracer)
         {
             EnsureFolder(PrefabFolder);
@@ -40,6 +42,7 @@ namespace VillaFPS.Editor
                 weapon.muzzle = muzzle;
                 weapon.muzzleLight = flash;
                 weapon.tracerMaterial = tracer;
+                CombineRigidParts("Carbine", model, new[] { model }, model.Find("Magazine"));
                 SetWeaponRendering(root);
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabFolder + "/Carbine.prefab");
             }
@@ -82,15 +85,17 @@ namespace VillaFPS.Editor
                 speaker.volume = .8f;
 
                 Transform model = Empty("Model", root.transform, Vector3.zero);
-                Mesh bevel = GetMesh("ChamferBox", ChamferBox);
+                Mesh bevel = EnvironmentBevelMesh();
                 Mesh helmet = GetMesh("EightFacetHelmet", Helmet);
-                Mesh torso = GetMesh("TaperedTorso", Torso);
+                Mesh torso = GetMesh("BeveledTorso", Torso);
 
                 // Feet touch y=0; large blocks stay distinct at the villa's short combat distances.
                 Part("Boot_Left", model, bevel, new Vector3(-.13f, .1f, .045f), new Vector3(.19f, .2f, .32f), dark);
                 Part("Boot_Right", model, bevel, new Vector3(.13f, .1f, .045f), new Vector3(.19f, .2f, .32f), dark);
                 Segment("Shin_Left", model, new Vector3(-.13f, .19f, 0), new Vector3(-.13f, .52f, 0), .155f, .19f, uniform);
                 Segment("Shin_Right", model, new Vector3(.13f, .19f, 0), new Vector3(.13f, .52f, 0), .155f, .19f, uniform);
+                Part("Shin_Plate", model.Find("Shin_Left"), bevel, new Vector3(0, 0, .55f), new Vector3(.72f, .68f, .1f), armor);
+                Part("Shin_Plate", model.Find("Shin_Right"), bevel, new Vector3(0, 0, .55f), new Vector3(.72f, .68f, .1f), armor);
                 Segment("Thigh_Left", model, new Vector3(-.13f, .52f, 0), new Vector3(-.12f, .87f, 0), .18f, .22f, uniform);
                 Segment("Thigh_Right", model, new Vector3(.13f, .52f, 0), new Vector3(.12f, .87f, 0), .18f, .22f, uniform);
                 Part("Knee_Left", model, bevel, new Vector3(-.13f, .52f, .105f), new Vector3(.15f, .15f, .055f), armor);
@@ -107,6 +112,10 @@ namespace VillaFPS.Editor
                 Part("Neck", model, bevel, new Vector3(0, 1.455f, 0), new Vector3(.15f, .12f, .16f), dark);
                 Part("Helmet", model, helmet, new Vector3(0, 1.57f, 0), new Vector3(.365f, .35f, .335f), armor);
                 Part("Face_Shield", model, bevel, new Vector3(0, 1.585f, .153f), new Vector3(.265f, .12f, .035f), visor);
+                Part("Visor_Frame_Top", model, bevel, new Vector3(0, 1.648f, .153f), new Vector3(.285f, .016f, .044f), dark);
+                Part("Visor_Frame_Bottom", model, bevel, new Vector3(0, 1.522f, .153f), new Vector3(.285f, .014f, .044f), dark);
+                Part("Visor_Frame_Left", model, bevel, new Vector3(-.1375f, 1.585f, .153f), new Vector3(.012f, .12f, .044f), dark);
+                Part("Visor_Frame_Right", model, bevel, new Vector3(.1375f, 1.585f, .153f), new Vector3(.012f, .12f, .044f), dark);
                 Part("Lower_Face", model, bevel, new Vector3(0, 1.49f, .145f), new Vector3(.19f, .08f, .055f), dark);
                 Part("Helmet_Ear_Left", model, bevel, new Vector3(-.178f, 1.57f, 0), new Vector3(.045f, .14f, .15f), dark);
                 Part("Helmet_Ear_Right", model, bevel, new Vector3(.178f, 1.57f, 0), new Vector3(.045f, .14f, .15f), dark);
@@ -132,6 +141,7 @@ namespace VillaFPS.Editor
                 walk.rightHip = RigLeg(model, "Right", .12f, out Transform rightKnee);
                 walk.leftKnee = leftKnee;
                 walk.rightKnee = rightKnee;
+                CombineRigidParts("Guard", model, new[] { model, walk.leftHip, leftKnee, walk.rightHip, rightKnee });
                 foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
                     child.gameObject.layer = VillaQueries.GuardLayer;
                 return PrefabUtility.SaveAsPrefabAsset(root, PrefabFolder + "/Guard.prefab");
@@ -152,7 +162,7 @@ namespace VillaFPS.Editor
 
         private static Transform BuildRifle(Transform parent, Material dark, Material copper, Material light, bool detail)
         {
-            Mesh bevel = GetMesh("ChamferBox", ChamferBox);
+            Mesh bevel = EnvironmentBevelMesh();
             Mesh tube = GetMesh("OctagonalCylinder", OctagonalCylinder);
             Part("Receiver", parent, bevel, new Vector3(0, .01f, .18f), new Vector3(.115f, .125f, .32f), dark);
             Part("Upper_Rail", parent, bevel, new Vector3(0, .084f, .24f), new Vector3(.08f, .03f, .4f), copper);
@@ -163,6 +173,8 @@ namespace VillaFPS.Editor
             barrel.localRotation = Quaternion.Euler(90, 0, 0);
             Transform muzzleBrake = Part("Muzzle_Brake", parent, tube, new Vector3(0, .016f, .63f), new Vector3(.052f, .04f, .052f), copper);
             muzzleBrake.localRotation = Quaternion.Euler(90, 0, 0);
+            Transform bore = Part("Muzzle_Bore", parent, tube, new Vector3(0, .016f, .6505f), new Vector3(.031f, .001f, .031f), dark);
+            bore.localRotation = Quaternion.Euler(90, 0, 0);
             Transform grip = Part("Grip", parent, bevel, new Vector3(0, -.105f, .105f), new Vector3(.075f, .145f, .08f), dark);
             grip.localRotation = Quaternion.Euler(-15, 0, 0);
             Transform magazine = Part("Magazine", parent, bevel, new Vector3(0, -.12f, .255f), new Vector3(.075f, .18f, .1f), dark);
@@ -170,10 +182,12 @@ namespace VillaFPS.Editor
             Part("Magazine_Base", magazine, bevel, new Vector3(0, -.49f, 0), new Vector3(1.12f, .1f, 1.12f), copper);
             Part("Rear_Sight_Left", parent, bevel, new Vector3(-.026f, .12f, .065f), new Vector3(.018f, .05f, .025f), dark);
             Part("Rear_Sight_Right", parent, bevel, new Vector3(.026f, .12f, .065f), new Vector3(.018f, .05f, .025f), dark);
-            Part("Front_Sight", parent, bevel, new Vector3(0, .121f, .49f), new Vector3(.014f, .055f, .025f), dark);
-            Part("Sight_Marker", parent, bevel, new Vector3(0, .145f, .488f), new Vector3(.009f, .008f, .028f), light);
+            Part("Front_Sight", parent, bevel, new Vector3(0, .1175f, .49f), new Vector3(.014f, .055f, .025f), dark);
+            Part("Sight_Marker", parent, bevel, new Vector3(0, .141f, .488f), new Vector3(.009f, .008f, .028f), light);
             if (detail)
             {
+                Part("Rear_Sight_Marker_Left", parent, bevel, new Vector3(-.026f, .14f, .0515f), new Vector3(.012f, .007f, .003f), light);
+                Part("Rear_Sight_Marker_Right", parent, bevel, new Vector3(.026f, .14f, .0515f), new Vector3(.012f, .007f, .003f), light);
                 Part("Side_Plate", parent, bevel, new Vector3(.06f, .015f, .17f), new Vector3(.009f, .068f, .16f), copper);
                 Part("Charging_Handle", parent, bevel, new Vector3(-.075f, .04f, .16f), new Vector3(.05f, .025f, .035f), dark);
                 for (int i = 0; i < 3; i++)
@@ -186,11 +200,21 @@ namespace VillaFPS.Editor
 
         private static void BuildHands(Transform model, Material glove, Material sleeve)
         {
-            Mesh bevel = GetMesh("ChamferBox", ChamferBox);
-            Segment("Sleeve_Right", model, new Vector3(.15f, -.31f, -.13f), new Vector3(.055f, -.13f, .095f), .115f, .13f, sleeve);
-            Part("Glove_Right", model, bevel, new Vector3(.045f, -.11f, .105f), new Vector3(.085f, .12f, .1f), glove);
-            Segment("Sleeve_Left", model, new Vector3(-.15f, -.27f, .17f), new Vector3(-.055f, -.065f, .39f), .11f, .12f, sleeve);
-            Part("Glove_Left", model, bevel, new Vector3(-.045f, -.065f, .39f), new Vector3(.09f, .075f, .12f), glove);
+            Mesh bevel = EnvironmentBevelMesh();
+            SleevedArm("Right", model, new Vector3(.15f, -.31f, -.13f), new Vector3(.055f, -.13f, .095f), .115f, .13f, sleeve, glove);
+            Transform rightHand = Part("Glove_Right", model, bevel, new Vector3(.045f, -.11f, .105f), new Vector3(.085f, .12f, .1f), glove);
+            Part("Thumb_Right", rightHand, bevel, new Vector3(-.38f, .2f, .15f), new Vector3(.4f, .4f, .66f), glove);
+            SleevedArm("Left", model, new Vector3(-.15f, -.27f, .17f), new Vector3(-.055f, -.065f, .39f), .11f, .12f, sleeve, glove);
+            Transform leftHand = Part("Glove_Left", model, bevel, new Vector3(-.045f, -.065f, .39f), new Vector3(.09f, .075f, .12f), glove);
+            Part("Thumb_Left", leftHand, bevel, new Vector3(.38f, .2f, .1f), new Vector3(.4f, .4f, .66f), glove);
+        }
+
+        private static void SleevedArm(string side, Transform model, Vector3 elbow, Vector3 wrist, float width, float depth, Material sleeve, Material cuff)
+        {
+            Vector3 cuffStart = wrist - (wrist - elbow).normalized * .035f;
+            // Split the existing sleeve volume, keeping the same wrist location and outer dimensions.
+            Segment("Sleeve_" + side, model, elbow, cuffStart, width, depth, sleeve);
+            Segment("Cuff_" + side, model, cuffStart, wrist, width, depth, cuff);
         }
 
         private static Transform Empty(string name, Transform parent, Vector3 position)
@@ -215,10 +239,159 @@ namespace VillaFPS.Editor
 
         private static Transform Segment(string name, Transform parent, Vector3 from, Vector3 to, float width, float depth, Material material)
         {
-            Transform result = Part(name, parent, GetMesh("ChamferBox", ChamferBox),
+            Transform result = Part(name, parent, EnvironmentBevelMesh(),
                 (from + to) * .5f, new Vector3(width, Vector3.Distance(from, to), depth), material);
             result.localRotation = Quaternion.FromToRotation(Vector3.up, to - from);
             return result;
+        }
+
+        private sealed class RigidMeshGroup
+        {
+            public readonly List<MeshFilter> filters = new List<MeshFilter>();
+            public readonly List<MeshRenderer> renderers = new List<MeshRenderer>();
+        }
+
+        private static void CombineRigidParts(string assetPrefix, Transform model, Transform[] motionRoots, Transform excluded = null)
+        {
+            var roots = new HashSet<Transform>(motionRoots);
+            var groups = new Dictionary<Transform, Dictionary<Material, RigidMeshGroup>>();
+            foreach (MeshRenderer renderer in model.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (excluded != null && renderer.transform.IsChildOf(excluded)) continue;
+                MeshFilter filter = renderer.GetComponent<MeshFilter>();
+                if (filter == null || filter.sharedMesh == null) continue;
+                Material material = renderer.sharedMaterial;
+                if (material == null || renderer.sharedMaterials.Length != 1 || filter.sharedMesh.subMeshCount != 1)
+                    throw new InvalidOperationException("Procedural rigid parts must have one mesh submesh and material: " + renderer.name);
+                Transform root = renderer.transform;
+                while (root != null && !roots.Contains(root)) root = root.parent;
+                if (root == null) throw new InvalidOperationException("No motion root for " + renderer.name);
+                if (!groups.TryGetValue(root, out Dictionary<Material, RigidMeshGroup> materialGroups))
+                {
+                    materialGroups = new Dictionary<Material, RigidMeshGroup>();
+                    groups.Add(root, materialGroups);
+                }
+                if (!materialGroups.TryGetValue(material, out RigidMeshGroup group))
+                {
+                    group = new RigidMeshGroup();
+                    materialGroups.Add(material, group);
+                }
+                group.filters.Add(filter);
+                group.renderers.Add(renderer);
+            }
+
+            foreach (KeyValuePair<Transform, Dictionary<Material, RigidMeshGroup>> rootEntry in groups)
+                foreach (KeyValuePair<Material, RigidMeshGroup> materialEntry in rootEntry.Value)
+                {
+                    Transform motionRoot = rootEntry.Key;
+                    Material material = materialEntry.Key;
+                    RigidMeshGroup group = materialEntry.Value;
+                    string materialGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(material));
+                    string suffix = materialGuid.Length >= 8 ? "_" + materialGuid.Substring(0, 8) : string.Empty;
+                    string meshName = SafeAssetName(assetPrefix + "_" + MotionRootPath(motionRoot, model)
+                        + "_" + material.name + suffix);
+                    Mesh merged = MergeRigidGeometry(group.filters, motionRoot, meshName);
+                    Mesh saved = SaveCombinedMesh(merged, meshName);
+                    MeshRenderer source = group.renderers[0];
+                    Transform output = Empty("Combined_" + material.name, motionRoot, Vector3.zero);
+                    output.gameObject.layer = source.gameObject.layer;
+                    output.gameObject.AddComponent<MeshFilter>().sharedMesh = saved;
+                    MeshRenderer renderer = output.gameObject.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterial = material;
+                    renderer.shadowCastingMode = source.shadowCastingMode;
+                    renderer.receiveShadows = source.receiveShadows;
+                    renderer.lightProbeUsage = source.lightProbeUsage;
+                    renderer.reflectionProbeUsage = source.reflectionProbeUsage;
+                    renderer.motionVectorGenerationMode = source.motionVectorGenerationMode;
+                    renderer.renderingLayerMask = source.renderingLayerMask;
+                    renderer.allowOcclusionWhenDynamic = source.allowOcclusionWhenDynamic;
+                    renderer.enabled = source.enabled;
+                    // Named parts, reload subtrees, and all marker transforms remain available.
+                    foreach (MeshRenderer oldRenderer in group.renderers) UnityEngine.Object.DestroyImmediate(oldRenderer);
+                    foreach (MeshFilter oldFilter in group.filters) UnityEngine.Object.DestroyImmediate(oldFilter);
+                }
+        }
+
+        private static Mesh MergeRigidGeometry(List<MeshFilter> filters, Transform motionRoot, string name)
+        {
+            var vertices = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var uv = new List<Vector2>();
+            var triangles = new List<int>();
+            foreach (MeshFilter filter in filters)
+            {
+                Mesh source = filter.sharedMesh;
+                Vector3[] sourceVertices = source.vertices;
+                Vector3[] sourceNormals = source.normals;
+                Vector2[] sourceUV = source.uv;
+                if (sourceNormals.Length != sourceVertices.Length)
+                    throw new InvalidOperationException("Procedural mesh normals are missing: " + source.name);
+                Matrix4x4 matrix = motionRoot.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                Matrix4x4 normalMatrix = matrix.inverse.transpose;
+                int start = vertices.Count;
+                for (int i = 0; i < sourceVertices.Length; i++)
+                {
+                    vertices.Add(matrix.MultiplyPoint3x4(sourceVertices[i]));
+                    // Preserve the original faceting under thin, nonuniform part scales.
+                    normals.Add(normalMatrix.MultiplyVector(sourceNormals[i]).normalized);
+                    uv.Add(sourceUV.Length == sourceVertices.Length ? sourceUV[i] : Vector2.zero);
+                }
+                int[] sourceTriangles = source.GetTriangles(0);
+                bool mirrored = matrix.determinant < 0f;
+                for (int i = 0; i < sourceTriangles.Length; i += 3)
+                {
+                    triangles.Add(start + sourceTriangles[i]);
+                    triangles.Add(start + sourceTriangles[i + (mirrored ? 2 : 1)]);
+                    triangles.Add(start + sourceTriangles[i + (mirrored ? 1 : 2)]);
+                }
+            }
+            Mesh merged = new Mesh
+            {
+                name = name,
+                indexFormat = vertices.Count > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16
+            };
+            merged.SetVertices(vertices);
+            merged.SetNormals(normals);
+            merged.SetUVs(0, uv);
+            merged.SetTriangles(triangles, 0);
+            merged.RecalculateBounds();
+            return merged;
+        }
+
+        private static Mesh SaveCombinedMesh(Mesh mesh, string name)
+        {
+            EnsureFolder(MeshFolder);
+            string path = MeshFolder + "/" + name + ".asset";
+            Mesh existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing == null)
+            {
+                AssetDatabase.CreateAsset(mesh, path);
+                return mesh;
+            }
+            // Geometry can change during polish; keep references stable without reusing stale data.
+            EditorUtility.CopySerialized(mesh, existing);
+            UnityEngine.Object.DestroyImmediate(mesh);
+            EditorUtility.SetDirty(existing);
+            return existing;
+        }
+
+        private static string MotionRootPath(Transform root, Transform model)
+        {
+            var names = new Stack<string>();
+            for (Transform current = root; current != null; current = current.parent)
+            {
+                names.Push(current.name);
+                if (current == model) break;
+            }
+            return string.Join("_", names);
+        }
+
+        private static string SafeAssetName(string name)
+        {
+            char[] characters = name.ToCharArray();
+            for (int i = 0; i < characters.Length; i++)
+                if (!char.IsLetterOrDigit(characters[i]) && characters[i] != '_' && characters[i] != '-') characters[i] = '_';
+            return new string(characters);
         }
 
         private static void SetWeaponRendering(GameObject root)
@@ -272,13 +445,60 @@ namespace VillaFPS.Editor
 
         private static Mesh Torso()
         {
-            Mesh mesh = ChamferBox();
+            Mesh mesh = BevelBox3D();
             Vector3[] vertices = mesh.vertices;
             for (int i = 0; i < vertices.Length; i++) vertices[i].x *= Mathf.Lerp(.77f, 1, vertices[i].y + .5f);
+            float maxX = 0;
+            foreach (Vector3 vertex in vertices) maxX = Mathf.Max(maxX, Mathf.Abs(vertex.x));
+            for (int i = 0; i < vertices.Length; i++) vertices[i].x *= .5f / maxX;
             mesh.vertices = vertices;
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
+        }
+
+        private static Mesh BevelBox3D()
+        {
+            const float inset = .06f;
+            const float edge = .5f - inset;
+            var builder = new FacetedBuilder();
+            void Outward(params Vector3[] points)
+            {
+                Vector3 center = Vector3.zero;
+                foreach (Vector3 point in points) center += point;
+                Vector3 normal = Vector3.Cross(points[1] - points[0], points[2] - points[0]);
+                if (Vector3.Dot(normal, center) < 0) Array.Reverse(points);
+                builder.Face(points);
+            }
+            Vector3 Point(int axisA, float valueA, int axisB, float valueB, int axisC, float valueC)
+            {
+                Vector3 result = Vector3.zero;
+                result[axisA] = valueA; result[axisB] = valueB; result[axisC] = valueC;
+                return result;
+            }
+            // Six inset planes, twelve narrow edge planes, eight small corner triangles.
+            for (int axis = 0; axis < 3; axis++)
+            {
+                int b = (axis + 1) % 3, c = (axis + 2) % 3;
+                foreach (int sign in new[] { -1, 1 })
+                    Outward(Point(axis, sign * .5f, b, -edge, c, -edge), Point(axis, sign * .5f, b, -edge, c, edge),
+                        Point(axis, sign * .5f, b, edge, c, edge), Point(axis, sign * .5f, b, edge, c, -edge));
+            }
+            for (int a = 0; a < 3; a++)
+                for (int b = a + 1; b < 3; b++)
+                {
+                    int c = 3 - a - b;
+                    foreach (int signA in new[] { -1, 1 })
+                        foreach (int signB in new[] { -1, 1 })
+                            Outward(Point(a, signA * .5f, b, signB * edge, c, -edge), Point(a, signA * .5f, b, signB * edge, c, edge),
+                                Point(a, signA * edge, b, signB * .5f, c, edge), Point(a, signA * edge, b, signB * .5f, c, -edge));
+                }
+            foreach (int x in new[] { -1, 1 })
+                foreach (int y in new[] { -1, 1 })
+                    foreach (int z in new[] { -1, 1 })
+                        Outward(new Vector3(x * .5f, y * edge, z * edge), new Vector3(x * edge, y * .5f, z * edge),
+                            new Vector3(x * edge, y * edge, z * .5f));
+            return builder.Build();
         }
 
         private static Mesh OctagonalCylinder() => RadialMesh(new[] { -.5f, .5f }, new[] { .5f, .5f });

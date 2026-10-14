@@ -33,7 +33,7 @@ public sealed class VillaPickup : MonoBehaviour
             && !obstruction.collider.transform.IsChildOf(transform)) return;
         float beforeHealth = m.Health.Current;
         int beforeAmmo = m.Weapon.Reserve;
-        bool accepted = health ? m.Health.Heal(HealthAmount) : m.Weapon.AddAmmo(AmmoAmount);
+        bool accepted = health ? m.Health.Heal(m.Balance.Healing) : m.Weapon.AddAmmo(m.Balance.AmmoPerPack);
         if (!accepted) return;
         collected = true;
         int added = health ? Mathf.CeilToInt(m.Health.Current - beforeHealth) : m.Weapon.Reserve - beforeAmmo;

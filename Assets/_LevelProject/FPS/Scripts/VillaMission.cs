@@ -13,10 +13,13 @@ public sealed class VillaMission : MonoBehaviour
     private static bool restartImmediately;
     private static bool hasSessionSettings;
     private static float sessionSensitivity = .1f, sessionVolume = .7f;
+    private static float sessionFov=70f, sessionReticleScale=1f;
     private static bool sessionShake = true;
     private const string PreferencePrefix = "VillaFPS.v1.";
     public Camera sceneCamera;
     public UniversalRenderPipelineAsset renderPipeline;
+    public VillaBalance balance;
+    public VillaBalance Balance=>balance!=null ? balance : VillaBalance.Default;
     public Transform spawn, objective, extraction;
     public GameObject weaponPrefab;
     public VillaGuard[] guards;
@@ -41,6 +44,7 @@ public sealed class VillaMission : MonoBehaviour
     public string Interaction { get; private set; }
     public float Sensitivity = .1f, Volume = .7f;
     public bool CameraShake = true;
+    public float FieldOfView=70f, ReticleScale=1f;
     private AudioSource speaker;
     private LevelDoor targetDoor;
     private bool targetData, focused = true;
@@ -51,6 +55,7 @@ public sealed class VillaMission : MonoBehaviour
     private RenderPipelineAsset previousPipeline;
     private float previousListenerVolume;
     private bool runtimeStarted;
+    private int previousFrameRate;
 
     private void Awake()
     {
@@ -59,6 +64,7 @@ public sealed class VillaMission : MonoBehaviour
         Instance = this;
         previousPipeline = QualitySettings.renderPipeline;
         previousListenerVolume = AudioListener.volume;
+        previousFrameRate=Application.targetFrameRate;
         if (renderPipeline != null) QualitySettings.renderPipeline = renderPipeline;
     }
     private void Start()
@@ -71,9 +77,12 @@ public sealed class VillaMission : MonoBehaviour
         player.layer = VillaQueries.PlayerLayer;
         Player = player.AddComponent<LevelPlaytestController>();
         Player.ExternalControl = true;
+        Player.ConfigureMovement(Balance.WalkSpeed,Balance.SprintSpeed,Balance.JumpHeight,Balance.Gravity);
         Player.Initialize(sceneCamera, spawn.position, spawn.rotation);
+        sceneCamera.fieldOfView=FieldOfView;
         player.GetComponent<LevelDoorInteractor>().enabled = false;
         Health = player.AddComponent<VillaHealth>();
+        Health.maximum=Balance.PlayerHealth; Health.Restore();
         Health.Damaged += OnDamaged;
         Health.Died += Lose;
         speaker = player.AddComponent<AudioSource>(); speaker.spatialBlend = 0f;
@@ -140,6 +149,7 @@ public sealed class VillaMission : MonoBehaviour
     private void ChangePhase(Phase next)
     {
         State = next; Time.timeScale = Playing ? 1f : 0f;
+        Application.targetFrameRate=Playing ? 120 : 60;
         if (Player != null) Player.SetCursorCaptured(Playing);
         suppressFireUntil = Time.unscaledTime + .2f;
         if (!Playing && Weapon != null && Weapon.muzzleLight != null) Weapon.muzzleLight.enabled = false;
@@ -172,15 +182,19 @@ public sealed class VillaMission : MonoBehaviour
         LevelDoor.SyncMovedColliders();
         VillaQueries.SyncTransforms();
         Player.MoveCharacter(move * (Weapon.Aiming ? .65f : 1f), sprint, jump, Mathf.Min(Time.deltaTime, .1f));
+        float horizontalSpeed=Player.HorizontalSpeed;
         Weapon.Tick(mouse != null && mouse.leftButton.isPressed && Time.unscaledTime > suppressFireUntil,
-            mouse != null && mouse.rightButton.isPressed, sprint, reload, Mathf.Clamp01(move.magnitude));
+            mouse != null && mouse.rightButton.isPressed, sprint, reload,Mathf.Clamp01(horizontalSpeed/Balance.WalkSpeed));
         UpdateInteraction(keyboard != null && keyboard.eKey.wasPressedThisFrame);
-        if (move.sqrMagnitude > .1f && Player.Grounded && Time.time > nextStep)
-        { nextStep = Time.time + (sprint ? .28f : .43f); PlayCue(6, .2f); }
+        if (horizontalSpeed > .2f && Player.Grounded && Time.time > nextStep)
+        {
+            nextStep = Time.time + (sprint ? .28f : .43f);
+            PlayCue(VillaQueries.TerrainUnderfoot(Player.transform.position) ? 13 : 6,.2f);
+        }
         Vector3 toExit = Player.transform.position - extraction.position;
         if (HasData && new Vector2(toExit.x, toExit.z).magnitude < 1.8f && Mathf.Abs(toExit.y) < 2f)
         { ChangePhase(Phase.Won); PlayCue(8); }
-        if (Player.transform.position.y < spawn.position.y - 10f) Health.Damage(100f, Player.transform.position);
+        if (Player.transform.position.y < spawn.position.y - 10f) Health.Damage(Health.maximum, Player.transform.position);
     }
     private void UpdateInteraction(bool use)
     {
@@ -199,7 +213,12 @@ public sealed class VillaMission : MonoBehaviour
             if (reserveGuard != null) reserveGuard.gameObject.SetActive(true);
             Notify("VERİ ALINDI / BAHÇEDEKİ ÇIKIŞA DÖN"); PlayCue(3);
         }
-        else if (targetDoor != null) targetDoor.Toggle();
+        else if (targetDoor != null)
+        {
+            bool wasOpen=targetDoor.IsOpen;
+            targetDoor.Toggle();
+            if (targetDoor.IsOpen!=wasOpen) PlayCue(11,.4f);
+        }
     }
     public bool CanGuardFire(VillaGuard guard)
     {
@@ -212,14 +231,14 @@ public sealed class VillaMission : MonoBehaviour
                 shootingGuards[i] = null;
             if (shootingGuards[i] == guard)
             {
-                shootingLeaseUntil[i] = Time.time + 1.05f;
+                shootingLeaseUntil[i] = Time.time + Balance.GuardShotInterval + .05f;
                 return true;
             }
             if (shootingGuards[i] == null) freeSlot = i;
         }
         if (freeSlot < 0) return false;
         shootingGuards[freeSlot] = guard;
-        shootingLeaseUntil[freeSlot] = Time.time + 1.05f;
+        shootingLeaseUntil[freeSlot] = Time.time + Balance.GuardShotInterval + .05f;
         return true;
     }
     private void OnDamaged(float amount, Vector3 source)
@@ -239,26 +258,39 @@ public sealed class VillaMission : MonoBehaviour
         if (Instance == this) Instance = null;
         if (renderPipeline != null && QualitySettings.renderPipeline == renderPipeline) QualitySettings.renderPipeline = previousPipeline;
         AudioListener.volume = previousListenerVolume;
+        Application.targetFrameRate=previousFrameRate;
         Time.timeScale = 1f; Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
     }
 
     private void LoadSettings()
     {
         if (hasSessionSettings)
-        { Sensitivity=sessionSensitivity; Volume=sessionVolume; CameraShake=sessionShake; return; }
+        { Sensitivity=sessionSensitivity; Volume=sessionVolume; CameraShake=sessionShake; FieldOfView=sessionFov; ReticleScale=sessionReticleScale; return; }
         Sensitivity=ValidSetting(PlayerPrefs.GetFloat(PreferencePrefix+"Sensitivity",Sensitivity),.03f,.3f,.1f);
         Volume=ValidSetting(PlayerPrefs.GetFloat(PreferencePrefix+"Volume",Volume),0f,1f,.7f);
         CameraShake=PlayerPrefs.GetInt(PreferencePrefix+"CameraReaction",CameraShake ? 1 : 0) != 0;
+        FieldOfView=ValidSetting(PlayerPrefs.GetFloat(PreferencePrefix+"FieldOfView",FieldOfView),60f,90f,70f);
+        ReticleScale=ValidSetting(PlayerPrefs.GetFloat(PreferencePrefix+"ReticleScale",ReticleScale),1f,1.75f,1f);
     }
 
     public void SaveSettings()
     {
         Sensitivity=ValidSetting(Sensitivity,.03f,.3f,.1f); Volume=ValidSetting(Volume,0f,1f,.7f);
+        FieldOfView=ValidSetting(FieldOfView,60f,90f,70f); ReticleScale=ValidSetting(ReticleScale,1f,1.75f,1f);
         hasSessionSettings=true; sessionSensitivity=Sensitivity; sessionVolume=Volume; sessionShake=CameraShake;
+        sessionFov=FieldOfView; sessionReticleScale=ReticleScale;
         PlayerPrefs.SetFloat(PreferencePrefix+"Sensitivity",Sensitivity);
         PlayerPrefs.SetFloat(PreferencePrefix+"Volume",Volume);
         PlayerPrefs.SetInt(PreferencePrefix+"CameraReaction",CameraShake ? 1 : 0);
+        PlayerPrefs.SetFloat(PreferencePrefix+"FieldOfView",FieldOfView);
+        PlayerPrefs.SetFloat(PreferencePrefix+"ReticleScale",ReticleScale);
         PlayerPrefs.Save();
+    }
+
+    public void ResetSettings()
+    {
+        Sensitivity=.1f; Volume=.7f; CameraShake=true; FieldOfView=70f; ReticleScale=1f;
+        AudioListener.volume=Volume; SaveSettings();
     }
 
     private static float ValidSetting(float value,float min,float max,float fallback)

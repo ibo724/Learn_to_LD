@@ -4,6 +4,8 @@
 
 **Manuel kontrol durumu: NOT RUN — henüz uygulanmadı.** Oyun başlatma, menü tıklamaları, klavye, hassasiyet/ses ayarları, odak değişimi ve aşağıdaki mekanikler senin kontrolünü bekliyor. Windows derlemesinin oluşturulmuş olması bu kontrollerin yapıldığı anlamına gelmez.
 
+Liste 0.2.0 prototipinin kontrollerini içerir. Sayısal beklentiler varsayılan **Villa Balance** profiline göredir; profili değiştirirsen yeni değerleri kontrol notuna yaz. Eklenen FOV, nişangâh, efekt ve ortam sesi maddelerinin durumu da **NOT RUN**. İlk 15–20 dakikalık turda yetişmeyen kutuları boş bırakabilirsin.
+
 ## Başlatmak için iki seçenek
 
 **Windows paketi:** `C:\Projects\Learn_to_LD\Builds\Villa_Operation\Villa_Operation.exe` dosyasını aç. Yanındaki `Villa_Operation_Data` klasörünü ve Unity dosyalarını birlikte tut; yalnız exe'yi başka yere taşıma. Kontrolü bu paketle yapıyorsan aşağıdaki Play başlat/durdur adımları yerine oyunu aç/kapat.
@@ -27,10 +29,13 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 ## 2. Hareket ve silah — 2–5 dakika
 
 - [ ] **WASD** ile hareket et, fareyle bak, **Shift** ile koş, **Space** ile zıpla. Merdivenlerde ve kapı eşiklerinde takılma veya zeminden düşme var mı?
+- [ ] **NOT RUN:** Bir duvara doğru yürüyüp gerçekten durduğunda adım sesi kesilmeli; yalnız W basılı diye devam etmemeli. Çim/toprakta yumuşak, sert iç zeminde daha tok adımlar beklenir. Hareket eden muhafızların adımlarında da yüzey farkını dinle.
 - [ ] Silah modeli ekranda görünmeli; duvara yaklaşınca görüntü tamamen kaybolmamalı veya ekranı kaplamamalı.
 - [ ] Sol tıkla beş atış yap: şarjör `25`, yedek `90` olmalı. Tetik basılı tutulunca ateş devam etmeli.
 - [ ] Sağ tıkla nişan al: görüş yakınlaşmalı, nişangâh sadeleşmeli. Bırakınca normal görüşe dönmeli.
 - [ ] **R** ile doldur: yaklaşık iki saniyede şarjör `30`, yedek `85` olmalı. Doldurma sırasında ateş etmemeli.
+- [ ] **NOT RUN:** Doldururken silahın şarjör parçası hareket edip yerine dönmeli; namlu parlaması yalnız atış anında kısa görünmeli. Duraklatma/sonuç ekranında parıltı takılı kalmamalı.
+- [ ] **NOT RUN:** Doldurma gerçekten tamamlanıp mühimmat şarjöre aktarıldığında kısa bir hazır klik sesi duyulmalı. Baştaki mekanizma sesiyle bu bitiş sesini ayır; duraklatılmış doldurma kendi kendine bitiş sesi üretmemeli.
 - [ ] Koşarken ateş ve nişan alma engellenmeli. Duvara çok yakın ateş edildiğinde duvarın arkasındaki muhafız hasar almamalı.
 - [ ] Şarjörü boşalt: boş tetik sesi gelmeli, mermi sayısı eksiye düşmemeli. Yeniden doldurduğunda yedekten yalnız eksik miktar alınmalı.
 
@@ -38,6 +43,9 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 
 - [ ] **Esc** ile duraklat. Fare serbest kalmalı; muhafız hareketi, ateş ve görev süresi durmalı.
 - [ ] **Ayarlar** içinde fare hassasiyetini değiştir, sesi azalt ve kamera tepkisini kapat. Fareyle düğmelerin tamamı çalışmalı.
+- [ ] **NOT RUN:** **Görüş açısı (dikey)** değerini `60°` ve `90°` arasında değiştir. Oyuna dönünce görüşün genişliği değişmeli; sağ tıkla nişan alıp bırakınca seçtiğin açıya geri gelmeli.
+- [ ] **NOT RUN:** **Nişangâh boyutu** değerini `%100–%175` arasında değiştir. Merkez işareti ve isabet X'i büyümeli; açık renkli duvarda koyu kenar okunaklı kalmalı. Bu ayar atış hasarını değiştirmemeli.
+- [ ] **NOT RUN:** **Varsayılanlar** düğmesini dene: ses `%70`, FOV `70°`, nişangâh `%100`, kamera tepkisi **Açık** olmalı. Fare hassasiyeti başlangıç `0,1` değerine döner; mevcut yüzde ölçeğinde yaklaşık `26/100` görünür. Sonra kalıcılık kontrolü için tekrar kendi tercihlerini seç.
 - [ ] Ayarlardayken bir kez **Esc**: ayarlar kapanmalı, oyun hâlâ duraklatılmış kalmalı. İkinci Esc veya **Devam Et** ile oyun sürmeli.
 - [ ] Oyuna dönünce hassasiyet ve ses değişimini kontrol et. Kamera tepkisi kapalıyken ateşin bakışı itmesi kalkmalı; hasar/isabet göstergeleri kalmalı.
 - [ ] İstersen menüde **yukarı/aşağı**, **Tab**, **Enter**; ayarlarda **sol/sağ** tuşlarını dene. Bir tuşa basınca iki farklı işlem tetiklenmemeli.
@@ -50,9 +58,12 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 - [ ] Planlanan dağılım toplam **8 muhafız: başlangıçta 7 etkin, veri alınınca 1 yedek**. Sekizincisi başlangıçta çatışmaya katılmamalı. Gerekirse duraklatıp Hierarchy'den etkinlik durumlarını incele.
 - [ ] Görüşe girince muhafız tepki vermeli; sağlam duvarın arkasındayken doğrudan seni görmemeli. Duvarın içinden ateş/hasar geliyor mu?
 - [ ] Camın iki tarafında görünürlük korunmalı. Muhafız seni camın arkasından görebilmeli, fakat sağlam cam mermiyi durdurmalı. Pencere kasası ve duvar da mermiyi kesmeli.
+- [ ] **NOT RUN:** Duvar ve cam isabetlerinde küçük yüzey izlerini kontrol et. Camdaki görsel iz kırılma mekaniği değildir; cam sağlam kalmalı ve sonraki mermileri de durdurmalı. İzler zamanla kaybolmalı.
 - [ ] Kapıya yaklaş, ortasına bak ve **E** ile aç/kapat. Uzakta veya arada duvar varken etkileşim olmamalı; hedef mesafesi **2,5 metre**.
 - [ ] Normal kapılar menteşeden dönmeli. Camlı geçişin kanatları yana kaymalı; kasa sabit kalmalı, parçalar kopup havada kalmamalı.
+- [ ] **NOT RUN:** Kabul edilen kapı aç/kapat etkileşiminde kısa, düşük seviyeli mekanizma sesi duyulmalı. Uzakta E'ye basmak kapı sesi üretmemeli.
 - [ ] Muhafıza isabet edince merkezde geri bildirim, sen hasar alınca can azalması ve saldırı yönü göstergesi görünmeli. Ölen muhafız ateşe devam etmemeli.
+- [ ] **NOT RUN:** Yatay yön farkı olmayan yukarı/aşağı hasarla karşılaşırsan gösterge ön/arka yön uydurmadan nötr bir çerçeve göstermeli. Normal turda bu durum oluşmazsa bu kutuyu boş bırak; sonucu varsayma.
 
 ## 5. Can ve mühimmat paketleri — 10–12 dakika
 
@@ -69,6 +80,7 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 - [ ] Üst kattaki veri cihazını bul. **2,5 metre içinde**, doğrudan cihaza bakınca **[E] Veri Cihazını Al** görünmeli.
 - [ ] E'ye bas: cihaz kaybolmalı, veri alındı bildirimi gelmeli, görev **Çıkışa Ulaş** olarak değişmeli. Yedek muhafız bu aşamada etkinleşmeli.
 - [ ] Bahçedeki işaretli çıkışa dön. Konumu bulmak gerekirse dünya koordinatları yaklaşık **X: 127,6 / Z: −16,4**. HUD'deki çıkış mesafesi yaklaşırken azalmalı.
+- [ ] **NOT RUN:** Veri sende olduğunda çıkışı bakışın dışına al ve arkanı dön. Ekranın kenarında küçük **ÇIKIŞ** yön oku görünmeli; hedefe bakınca dünya üzerindeki işarete geçmeli. Veriyi almadan bu ok görünmemeli.
 - [ ] Çıkışa yaklaşık **1,8 metre** yaklaşınca başarı ekranı görünmeli. Veri yanında olmadan bu ekran açılmamalı.
 - [ ] Süre, muhafız sayısı ve isabet yüzdesini kontrol et. Sonuç ekranında oyun ve sayılar ilerlememeli.
 
@@ -77,16 +89,19 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 - [ ] Başarı ekranından **Yeniden Dene**: doğrudan yeni görev başlamalı. Can `100`, mühimmat `30 / 090`, süre ve muhafız sayacı sıfır; veri cihazı ve paketler yeniden yerlerinde olmalı. Yedek muhafız tekrar pasif başlamalı.
 - [ ] Bu yeni denemede muhafızdan hasar alarak canı sıfıra indir: başarısızlık ekranı açılmalı, ateş ve hareket durmalı.
 - [ ] Başarısızlıktan **Yeniden Dene** aynı başlangıç sıfırlamasını yapmalı. **Başlangıca Dön** ise görev özeti ekranına götürmeli.
-- [ ] Seçtiğin ses/fare/kamera ayarları **Yeniden Dene** ve **Başlangıca Dön** sonrasında korunmalı. Bunlar görev ilerlemesiyle birlikte sıfırlanmamalı. **Durum: NOT RUN.**
-- [ ] Ayarları değiştirip **Geri/Esc** ile ayarlardan çık, oyunu tamamen kapat ve exe'yi yeniden aç. Üç ayar da önceki seçimini korumalı; görev ise başlangıç özetinden açılmalı. Windows'ta uygulamayı tam kapatıp yeniden açma kontrolü, yalnız Unity'de Play'i durdurup başlatmaktan ayrıdır. **Durum: NOT RUN.**
+- [ ] Seçtiğin **ses, fare, kamera tepkisi, FOV ve nişangâh boyutu** ayarları **Yeniden Dene** ve **Başlangıca Dön** sonrasında korunmalı. Bunlar görev ilerlemesiyle birlikte sıfırlanmamalı. **Durum: NOT RUN.**
+- [ ] Ayarları değiştirip **Geri/Esc** ile ayarlardan çık, oyunu tamamen kapat ve exe'yi yeniden aç. Beş ayar da önceki seçimini korumalı; görev ise başlangıç özetinden açılmalı. Windows'ta uygulamayı tam kapatıp yeniden açma kontrolü, yalnız Unity'de Play'i durdurup başlatmaktan ayrıdır. **Durum: NOT RUN.**
 
 ## 8. Bahçe ve son görsel tur — 18–20 dakika
 
 - [ ] Havuzun sığ su yüzeyini, tabanını ve kenarlarını incele. Titreyen yüzey, büyük boşluk, görünmez duvar veya suya yaklaşınca düşme var mı? Bu sürümde yüzme mekaniği bekleme.
+- [ ] **NOT RUN:** Bahçede düşük seviyeli rüzgâr, havuza yaklaşınca hafif su sesi duyulmalı. Su sesi uzaklaşınca azalmalı; villanın içine girince rüzgâr yumuşayarak kısılmalı. Silah ve etkileşim sesleri bu arka planın üzerinde okunaklı kalmalı.
+- [ ] **NOT RUN:** Rüzgâr/su döngüleri görev özeti, duraklatma ve başarı/başarısızlık ekranlarında durmalı. Devam edince yumuşakça geri gelmeli; uzun dinlemede döngü sınırında belirgin tık/sıçrama var mı? Sonuç bildirim sesi ortam döngüsünden ayrıdır.
 - [ ] Bahçe çitinin ve kapalı sınırların içinden yürüyerek geçilememeli. Haritanın dışına istemeden çıkılmamalı.
 - [ ] Krem duvar, petrol mavisi, bakır ve adaçayı renkleri okunaklı mı? Düşmanlar, veri cihazı ve paketler çevreden ayırt edilebiliyor mu?
 - [ ] Pembe materyal, eksik model, aşırı parlak cam/su, kayıp ses veya Game penceresinde taşan yazı var mı? Mümkünse 16:9 yanında 4:3 oranında da HUD'ye kısa bak.
 - [ ] 1024×768 ve 1280×720 gibi iki farklı Game penceresi boyutunda menü düğmelerinin görünen yerleriyle tıklanan alanları örtüşmeli. Küçük yazıları, sonuç sayacı ve ayar yüzdelerini okuyabiliyor musun? Farklı oranlarda metin veya düğme kesilmesi var mı?
+- [ ] **NOT RUN:** Hareket, ateş, duraklatma ve devam sırasında belirgin takılma/sıçrama varsa not et. Oyun için **120**, menüler için **60 kare/sn hedef sınırı** ayarlı; bunlar ölçülmüş performans veya garanti edilen FPS değildir. FPS'ye kendin bakarsan ekran boyutunu ve gördüğün değeri kaydet.
 - [ ] Play'i durdur. Kaynak `Assets/_LevelProject/Scenes 1/Industrial_Level_01.unity` ayrı durmalı; bu kontrol için yaptığın denemeleri kaynak sahneye kaydetme. Yeni FPS sahnesi üzerinden çalışıyoruz.
 
 ## Bir hata olduğunda gönderilecek kısa kayıt
@@ -104,6 +119,7 @@ Gördüğüm / duyduğum:
 Her denemede oluyor mu?:
 Yaklaşık yer (oda / bahçe / üst kat / kapı; biliniyorsa koordinat):
 Console ilk hata mesajı ve stack trace:
+Varsayılanlardan farklı denge/oyuncu ayarları:
 ```
 
 Ekran görüntüsünde **Game veya Scene'deki sorunlu yeri** ve ayrıca **Console'da seçili ilk hatanın ayrıntısını** göster. Console'da kırmızı hata yoksa bunu da belirt. Böylece görsel yerleşim sorunu ile kod hatasını ayırabiliriz.

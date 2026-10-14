@@ -30,6 +30,23 @@ public sealed class LevelPlaytestController : MonoBehaviour
     public Camera ViewCamera => playerCamera;
     public float LookSensitivity { get => mouseSensitivity; set => mouseSensitivity = value; }
     public bool Grounded => character != null && character.isGrounded;
+    public float HorizontalSpeed
+    {
+        get
+        {
+            if (character==null) return 0f;
+            Vector3 velocity=character.velocity;
+            return new Vector2(velocity.x,velocity.z).magnitude;
+        }
+    }
+
+    public void ConfigureMovement(float walk,float sprint,float jump,float fallGravity)
+    {
+        walkSpeed=Mathf.Clamp(walk,.1f,12f);
+        sprintSpeed=Mathf.Clamp(sprint,walkSpeed,16f);
+        jumpHeight=Mathf.Clamp(jump,0f,2f);
+        gravity=Mathf.Clamp(fallGravity,-50f,-1f);
+    }
 
     public void SetCursorCaptured(bool captured)
     {

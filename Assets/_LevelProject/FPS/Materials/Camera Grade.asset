@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!114 &-3277567383150739043
+--- !u!114 &-1235041933128130390
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,9 +41,9 @@ MonoBehaviour:
   m_Name: Camera Grade
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.VolumeProfile
   components:
-  - {fileID: -3277567383150739043}
-  - {fileID: 1909929969783701114}
---- !u!114 &1909929969783701114
+  - {fileID: -1235041933128130390}
+  - {fileID: 5404231396341608484}
+--- !u!114 &5404231396341608484
 MonoBehaviour:
   m_ObjectHideFlags: 3
   m_CorrespondingSourceObject: {fileID: 0}

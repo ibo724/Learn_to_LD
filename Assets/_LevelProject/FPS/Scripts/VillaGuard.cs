@@ -6,26 +6,32 @@ using UnityEngine.Rendering;
 [RequireComponent(typeof(NavMeshAgent), typeof(VillaHealth))]
 public sealed class VillaGuard : MonoBehaviour
 {
-    private const float DetectionDistance = 12f;
-    private const float AttackDistance = 7f;
-    private const float ReactionTime = .7f;
-    private const float SearchDuration = 4f;
-    private const float FireInterval = 1f;
-    private const float ShotDamage = 10f;
+    private static readonly int AccentColorId = Shader.PropertyToID("_AccentColor");
+    private static readonly int AccentStrengthId = Shader.PropertyToID("_AccentStrength");
+
+    private sealed class ArmorFlash
+    {
+        public MeshRenderer renderer;
+        public MaterialPropertyBlock original, flash;
+    }
 
     public Vector3[] patrol = new Vector3[0];
     public Transform visual, muzzle;
-    public AudioClip shotClip, alertClip, footstepClip;
+    public AudioClip shotClip, alertClip, footstepClip, grassFootstepClip;
     public Material tracerMaterial;
     private NavMeshAgent agent;
     private VillaHealth health;
+    private VillaBalance balance;
     private AudioSource speaker;
     private LineRenderer trace;
+    private MeshRenderer muzzleFlare;
+    private ArmorFlash[] armorFlashes;
     private Vector3 lastSeen, visualHome;
     private Quaternion visualRotation;
     private float reactionUntil, searchUntil, nextShot, nextRepath, nextNavCheck, patrolWaitUntil, traceUntil, nextFootstep;
-    private int waypoint;
-    private bool alerted, searching, hadSight, hasPatrolDestination, dead;
+    private float flashUntil, armorFlashUntil;
+    private int waypoint, shotVisualCounter;
+    private bool alerted, searching, hadSight, hasPatrolDestination, dead, armorFlashing;
     public bool Alive => !dead && health != null && health.Alive && isActiveAndEnabled;
     // Engaged means able to line up an actual shot, rather than merely seeing through glass.
     public bool Engaged { get; private set; }
@@ -35,6 +41,10 @@ public sealed class VillaGuard : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         health = GetComponent<VillaHealth>();
+        balance = VillaMission.Instance != null ? VillaMission.Instance.Balance : VillaBalance.Default;
+        health.maximum = balance.GuardHealth;
+        health.Restore();
+        agent.speed = balance.GuardSpeed;
         speaker = GetComponent<AudioSource>();
         nextFootstep = Time.time + Mathf.Abs(GetInstanceID() % 10) * .047f;
         health.Damaged += OnDamaged;
@@ -43,6 +53,7 @@ public sealed class VillaGuard : MonoBehaviour
         {
             visualHome = visual.localPosition;
             visualRotation = visual.localRotation;
+            CacheArmorFlashes();
         }
         if (tracerMaterial != null)
         {
@@ -55,6 +66,44 @@ public sealed class VillaGuard : MonoBehaviour
             trace.endWidth = .008f;
             trace.positionCount = 2;
             trace.enabled = false;
+        }
+    }
+
+    private void Start()
+    {
+        VillaImpactEffects.Prepare(VillaMission.Instance, tracerMaterial);
+        muzzleFlare = VillaImpactEffects.CreateMuzzleVisual(muzzle, tracerMaterial, VillaQueries.GuardLayer, 1.15f);
+    }
+
+    private void CacheArmorFlashes()
+    {
+        MeshRenderer[] renderers = visual.GetComponentsInChildren<MeshRenderer>(true);
+        armorFlashes = new ArmorFlash[renderers.Length];
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            Material material = renderers[i].sharedMaterial;
+            if (material == null || !material.HasProperty(AccentColorId) || !material.HasProperty(AccentStrengthId)) continue;
+            ArmorFlash target = new ArmorFlash { renderer = renderers[i],
+                original = new MaterialPropertyBlock(), flash = new MaterialPropertyBlock() };
+            renderers[i].GetPropertyBlock(target.original);
+            renderers[i].GetPropertyBlock(target.flash);
+            target.flash.SetColor(AccentColorId, new Color(.95f, .79f, .48f));
+            target.flash.SetFloat(AccentStrengthId, .45f);
+            armorFlashes[i] = target;
+        }
+    }
+
+    private void UpdateArmorFlash(bool visible)
+    {
+        bool active = visible && Time.time < armorFlashUntil;
+        if (active == armorFlashing) return;
+        armorFlashing = active;
+        if (armorFlashes == null) return;
+        for (int i = 0; i < armorFlashes.Length; i++)
+        {
+            ArmorFlash target = armorFlashes[i];
+            if (target != null && target.renderer != null)
+                target.renderer.SetPropertyBlock(active ? target.flash : target.original);
         }
     }
 
@@ -72,8 +121,7 @@ public sealed class VillaGuard : MonoBehaviour
             || mission.Health == null || !mission.Health.Alive)
         {
             StopNavigation();
-            traceUntil = 0f;
-            if (trace != null) trace.enabled = false;
+            HideTransientEffects();
             return;
         }
 
@@ -84,21 +132,21 @@ public sealed class VillaGuard : MonoBehaviour
         Vector3 horizontalToPlayer = toPlayer;
         horizontalToPlayer.y = 0f;
         float distance = toPlayer.magnitude;
-        bool sees = distance <= DetectionDistance
-            && (alerted || Vector3.Angle(transform.forward, horizontalToPlayer) <= 50f)
+        bool sees = distance <= balance.GuardViewDistance
+            && (alerted || Vector3.Angle(transform.forward, horizontalToPlayer) <= balance.GuardVisionAngle * .5f)
             && VillaQueries.Cast(eye, toPlayer, distance + .1f, transform, out RaycastHit sight, true)
             && IsPlayer(sight.collider, mission);
 
         if (sees)
         {
             if (!alerted) Alert(mission.Player.transform.position);
-            else if (!hadSight) reactionUntil = Mathf.Max(reactionUntil, Time.time + .35f);
+            else if (!hadSight) reactionUntil = Mathf.Max(reactionUntil, Time.time + balance.GuardReactionSeconds * .5f);
             lastSeen = mission.Player.transform.position;
-            searchUntil = Time.time + SearchDuration;
+            searchUntil = Time.time + balance.GuardSearchSeconds;
             searching = true;
             hasPatrolDestination = false;
 
-            bool inRange = distance <= AttackDistance;
+            bool inRange = distance <= balance.GuardAttackDistance;
             bool clearShot = inRange && HasClearShot(eye, target, mission);
             if (clearShot)
             {
@@ -145,9 +193,13 @@ public sealed class VillaGuard : MonoBehaviour
             && Time.time >= nextFootstep && speaker != null && footstepClip != null)
         {
             nextFootstep = Time.time + .48f;
-            speaker.PlayOneShot(footstepClip, .18f);
+            AudioClip step = grassFootstepClip != null && VillaQueries.TerrainUnderfoot(transform.position)
+                ? grassFootstepClip : footstepClip;
+            speaker.PlayOneShot(step, .18f);
         }
         if (trace != null) trace.enabled = mission.Playing && Time.time < traceUntil;
+        if (muzzleFlare != null) muzzleFlare.enabled = mission.Playing && Time.time < flashUntil;
+        UpdateArmorFlash(mission.Playing);
     }
 
     private void TryBindNavigation()
@@ -227,8 +279,8 @@ public sealed class VillaGuard : MonoBehaviour
     {
         alerted = searching = true;
         lastSeen = source;
-        reactionUntil = Time.time + ReactionTime;
-        searchUntil = Time.time + SearchDuration;
+        reactionUntil = Time.time + balance.GuardReactionSeconds;
+        searchUntil = Time.time + balance.GuardSearchSeconds;
         nextRepath = 0f;
         hasPatrolDestination = false;
         if (speaker != null && alertClip != null) speaker.PlayOneShot(alertClip, .35f);
@@ -237,6 +289,8 @@ public sealed class VillaGuard : MonoBehaviour
     private void OnDamaged(float amount, Vector3 source)
     {
         if (dead || health == null || !health.Alive) return;
+        armorFlashUntil = Time.time + .065f;
+        UpdateArmorFlash(true);
         VillaMission mission = VillaMission.Instance;
         // Damage sources are muzzle/camera positions, which can be above the nav sampling radius.
         Vector3 searchPoint = mission != null && mission.Player != null
@@ -245,7 +299,7 @@ public sealed class VillaGuard : MonoBehaviour
         else
         {
             lastSeen = searchPoint;
-            searchUntil = Time.time + SearchDuration;
+            searchUntil = Time.time + balance.GuardSearchSeconds;
             searching = true;
         }
     }
@@ -285,7 +339,7 @@ public sealed class VillaGuard : MonoBehaviour
             Engaged = false;
             return;
         }
-        nextShot = Time.time + FireInterval;
+        nextShot = Time.time + balance.GuardShotInterval;
         Vector3 origin = ShotOrigin(target);
         Vector3 forward = (target - origin).normalized;
         Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
@@ -294,7 +348,11 @@ public sealed class VillaGuard : MonoBehaviour
         Vector2 spread = Random.insideUnitCircle * Mathf.Tan(3f * Mathf.Deg2Rad);
         Vector3 direction = (forward + right * spread.x + up * spread.y).normalized;
         bool struck = VillaQueries.Cast(origin, direction, 30f, transform, out RaycastHit hit);
-        if (struck && IsPlayer(hit.collider, mission)) mission.Health.Damage(ShotDamage, origin);
+        if (struck && IsPlayer(hit.collider, mission)) mission.Health.Damage(balance.GuardDamage, origin);
+        else if (struck) VillaImpactEffects.Emit(hit);
+        flashUntil = Time.time + .055f;
+        if (muzzleFlare != null)
+            muzzleFlare.transform.localRotation = Quaternion.Euler(0f, 0f, ++shotVisualCounter * 47f % 360f);
         if (speaker != null && shotClip != null) speaker.PlayOneShot(shotClip, .35f);
         if (trace != null)
         {
@@ -319,18 +377,25 @@ public sealed class VillaGuard : MonoBehaviour
             visual.localRotation = visualRotation * Quaternion.Euler(-85f, 0f, 18f);
             visual.localPosition = visualHome + Vector3.up * .15f;
         }
-        if (trace != null) trace.enabled = false;
+        HideTransientEffects();
         VillaMission.Instance?.GuardDown();
+    }
+
+    private void HideTransientEffects()
+    {
+        traceUntil = flashUntil = armorFlashUntil = 0f;
+        if (trace != null) trace.enabled = false;
+        if (muzzleFlare != null) muzzleFlare.enabled = false;
+        UpdateArmorFlash(false);
     }
 
     private void OnDisable()
     {
         Engaged = false;
         hadSight = false;
-        traceUntil = 0f;
         VillaQueries.InvalidateTransforms();
         StopNavigation();
-        if (trace != null) trace.enabled = false;
+        HideTransientEffects();
     }
 
     private void OnDestroy()

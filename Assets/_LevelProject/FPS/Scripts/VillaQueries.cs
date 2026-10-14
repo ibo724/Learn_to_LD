@@ -22,6 +22,16 @@ public static class VillaQueries
     /// <summary>Call after a collider-bearing actor is warped or activated within the current frame.</summary>
     public static void InvalidateTransforms() => transformsDirty = true;
 
+    /// <summary>Whether the nearest supporting surface is terrain rather than a placed floor.</summary>
+    public static bool TerrainUnderfoot(Vector3 feet)
+    {
+        if (!IsFinite(feet)) return false;
+        SyncTransforms();
+        int mask = ~((1 << 2) | (1 << PlayerLayer) | (1 << GuardLayer) | (1 << WeaponLayer));
+        return Physics.Raycast(feet + Vector3.up * .25f, Vector3.down, out RaycastHit hit,
+            .6f, mask, QueryTriggerInteraction.Ignore) && hit.collider is TerrainCollider;
+    }
+
     public static bool IsFinite(Vector3 value)
     {
         return !float.IsNaN(value.x) && !float.IsInfinity(value.x)

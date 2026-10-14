@@ -8,6 +8,11 @@ public sealed class VillaHUD : MonoBehaviour
 
     private const float ReferenceWidth = 1440f;
     private const float ReferenceHeight = 900f;
+    private const int SettingsSliderCount = 4;
+    private static readonly float[] SettingMinimums = { .03f, 0f, 60f, 1f };
+    private static readonly float[] SettingMaximums = { .3f, 1f, 90f, 1.75f };
+    private static readonly float[] SettingSteps = { .01f, .05f, 1f, .05f };
+    private static readonly string[] SettingLabels = { "Fare hassasiyeti", "Ana ses", "Görüş açısı (dikey)", "Nişangâh boyutu" };
     private static readonly Color Ink = new Color(.055f, .12f, .15f, .97f);
     private static readonly Color Panel = new Color(.10f, .19f, .22f, .98f);
     private static readonly Color Cream = new Color(.95f, .92f, .84f);
@@ -25,9 +30,10 @@ public sealed class VillaHUD : MonoBehaviour
     private Vector2 pointer = new Vector2(-10000f, -10000f);
     private int pressedButton = -1, draggingSlider = -1, adjustDirection;
     private float nextAdjust;
+    private float defaultsNoticeUntil;
     private int lastScreenWidth, lastScreenHeight;
 
-    private int ControlCount => settings || mission.State != VillaMission.Phase.Briefing ? 4 : 3;
+    private int ControlCount => settings ? 7 : mission.State != VillaMission.Phase.Briefing ? 4 : 3;
 
     // Mission calls this before its pause/resume shortcut so Esc first leaves settings.
     public bool TryHandleEscape()
@@ -98,11 +104,11 @@ public sealed class VillaHUD : MonoBehaviour
         float x = left + 28;
         if (settings)
         {
-            float y = top + 286;
-            if (index == 0) return new Rect(x, y + 117, 720, 32);
-            if (index == 1) return new Rect(x, y + 222, 720, 32);
-            if (index == 2) return new Rect(x, y + 286, 720, 54);
-            return new Rect(x, y + 430, 350, 56);
+            float y = top + 250;
+            if (index < SettingsSliderCount) return new Rect(x, y + 100 + index * 78, 720, 32);
+            if (index == 4) return new Rect(x, y + 386, 720, 54);
+            if (index == 5) return new Rect(x + 370, y + 510, 350, 56);
+            return new Rect(x, y + 510, 350, 56);
         }
         float buttonsY = top + 555;
         if (index == 0) return new Rect(x, buttonsY, 720, 60);
@@ -125,7 +131,7 @@ public sealed class VillaHUD : MonoBehaviour
             {
                 if (!ControlRect(index).Contains(pointer)) continue;
                 selected = index;
-                if (settings && index < 2) draggingSlider = index;
+                if (settings && index < SettingsSliderCount) draggingSlider = index;
                 else pressedButton = index;
                 break;
             }
@@ -134,8 +140,7 @@ public sealed class VillaHUD : MonoBehaviour
         {
             Rect rect = ControlRect(draggingSlider);
             float value = Mathf.Clamp01((pointer.x - rect.x - 7f) / (rect.width - 14f));
-            if (draggingSlider == 0) mission.Sensitivity = Mathf.Lerp(.03f, .3f, value);
-            else { mission.Volume = value; AudioListener.volume = value; }
+            SetSettingValue(draggingSlider, Mathf.Lerp(SettingMinimums[draggingSlider], SettingMaximums[draggingSlider], value));
         }
         if (!mouse.leftButton.wasReleasedThisFrame) return;
         int released = pressedButton;
@@ -277,7 +282,9 @@ public sealed class VillaHUD : MonoBehaviour
             Fill(new Rect(centerX - 250, centerY + 54, 500, 48), Ink);
             Text(centerX - 230, centerY + 65, 460, 34, mission.Interaction, normal);
         }
-        else if (!mission.Weapon.Reloading && mission.Weapon.Magazine <= 5 && mission.Weapon.Reserve > 0)
+        else if (!mission.Weapon.Reloading && mission.Weapon.Reserve > 0 &&
+            mission.Weapon.Magazine < mission.Weapon.Capacity &&
+            mission.Weapon.Magazine <= Mathf.Max(1, mission.Weapon.Capacity / 6))
             Text(centerX - 200, centerY + 56, 400, 30, "R  /  ŞARJÖRÜ DOLDUR", centered);
 
         if (Time.unscaledTime < mission.NoticeUntil && !string.IsNullOrEmpty(mission.Notice))
@@ -294,22 +301,36 @@ public sealed class VillaHUD : MonoBehaviour
     {
         bool hit = Time.unscaledTime < mission.HitUntil;
         Color color = hit ? Copper : Cream;
-        Fill(new Rect(x - 1, y - 1, 3, 3), color);
+        float size = Mathf.Clamp(mission.ReticleScale, 1f, 1.75f);
+        float edge = 1.25f * size;
+        ReticleBlock(new Rect(x - 1.5f * size, y - 1.5f * size, 3 * size, 3 * size), color, edge);
         if (!mission.Weapon.Aiming)
         {
-            const float gap = 8f;
-            Fill(new Rect(x - gap - 6, y, 6, 2), color);
-            Fill(new Rect(x + gap, y, 6, 2), color);
-            Fill(new Rect(x, y - gap - 6, 2, 6), color);
-            Fill(new Rect(x, y + gap, 2, 6), color);
+            float gap = 8f * size, arm = 6f * size, thickness = 2f * size;
+            ReticleBlock(new Rect(x - gap - arm, y - size, arm, thickness), color, edge);
+            ReticleBlock(new Rect(x + gap, y - size, arm, thickness), color, edge);
+            ReticleBlock(new Rect(x - size, y - gap - arm, thickness, arm), color, edge);
+            ReticleBlock(new Rect(x - size, y + gap, thickness, arm), color, edge);
         }
         if (hit)
         {
-            Line(new Vector2(x - 13, y - 13), new Vector2(x - 7, y - 7), color, 2);
-            Line(new Vector2(x + 7, y + 7), new Vector2(x + 13, y + 13), color, 2);
-            Line(new Vector2(x + 7, y - 7), new Vector2(x + 13, y - 13), color, 2);
-            Line(new Vector2(x - 13, y + 13), new Vector2(x - 7, y + 7), color, 2);
+            OutlinedLine(new Vector2(x - 13 * size, y - 13 * size), new Vector2(x - 7 * size, y - 7 * size), color, 2 * size, edge);
+            OutlinedLine(new Vector2(x + 7 * size, y + 7 * size), new Vector2(x + 13 * size, y + 13 * size), color, 2 * size, edge);
+            OutlinedLine(new Vector2(x + 7 * size, y - 7 * size), new Vector2(x + 13 * size, y - 13 * size), color, 2 * size, edge);
+            OutlinedLine(new Vector2(x - 13 * size, y + 13 * size), new Vector2(x - 7 * size, y + 7 * size), color, 2 * size, edge);
         }
+    }
+
+    private static void ReticleBlock(Rect rect, Color color, float edge)
+    {
+        Fill(new Rect(rect.x - edge, rect.y - edge, rect.width + edge * 2, rect.height + edge * 2), Ink);
+        Fill(rect, color);
+    }
+
+    private static void OutlinedLine(Vector2 from, Vector2 to, Color color, float thickness, float edge)
+    {
+        Line(from, to, Ink, thickness + edge * 2);
+        Line(from, to, color, thickness);
     }
 
     private void DrawDamageDirection(float x, float y)
@@ -320,6 +341,12 @@ public sealed class VillaHUD : MonoBehaviour
         Fill(new Rect(0, 0, width, 5), color);
         Fill(new Rect(0, height - 5, width, 5), color);
         Vector3 local = mission.Player.transform.InverseTransformPoint(mission.HurtSource);
+        // A fall/self-source or a purely vertical source has no meaningful horizontal bearing.
+        if (!VillaQueries.IsFinite(local) || local.x * local.x + local.z * local.z < .01f)
+        {
+            Stroke(new Rect(x - 30, y - 30, 60, 60), color, 2);
+            return;
+        }
         if (Mathf.Abs(local.x) > Mathf.Abs(local.z))
             Fill(new Rect(x + (local.x < 0 ? -92 : 87), y - 18, 5, 36), color);
         else Fill(new Rect(x - 18, y + (local.z > 0 ? -92 : 87), 36, 5), color);
@@ -327,14 +354,47 @@ public sealed class VillaHUD : MonoBehaviour
 
     private void DrawExtractionMarker()
     {
-        if (mission.sceneCamera == null) return;
+        if (!mission.HasData || mission.sceneCamera == null || mission.extraction == null) return;
         Vector3 point = mission.sceneCamera.WorldToScreenPoint(mission.extraction.position + Vector3.up * 1.5f);
         float x = point.x / scale;
         float y = (Screen.height - point.y) / scale;
-        if (point.z <= 0 || x < 90 || x > width - 90 || y < 250 || y > height - 180) return;
-        Stroke(new Rect(x - 12, y - 12, 24, 24), Sage, 2);
-        Fill(new Rect(x - 46, y + 24, 92, 28), Ink);
-        Text(x - 43, y + 26, 86, 24, "ÇIKIŞ", centered);
+        Rect region = new Rect(90, 250, width - 180, height - 430);
+        if (VillaQueries.IsFinite(point) && point.z > .01f && region.Contains(new Vector2(x, y)))
+        {
+            Stroke(new Rect(x - 12, y - 12, 24, 24), Sage, 2);
+            float labelY = y > height - 225 ? y - 44 : y + 24;
+            Fill(new Rect(x - 46, labelY, 92, 28), Ink);
+            Text(x - 43, labelY + 2, 86, 24, "ÇIKIŞ", centered);
+            return;
+        }
+
+        Vector2 center = new Vector2(width * .5f, height * .5f);
+        Vector2 direction;
+        if (VillaQueries.IsFinite(point) && Mathf.Abs(point.z) > .01f)
+        {
+            direction = new Vector2(x, y) - center;
+            if (point.z < 0) direction = -direction;
+        }
+        else
+        {
+            Vector3 local = mission.sceneCamera.transform.InverseTransformPoint(mission.extraction.position);
+            if (!VillaQueries.IsFinite(local)) return;
+            direction = new Vector2(local.x, -local.y);
+        }
+        if (direction.sqrMagnitude < .001f) direction = Vector2.down;
+        direction.Normalize();
+        float horizontal = Mathf.Abs(direction.x) < .0001f ? float.PositiveInfinity :
+            ((direction.x > 0 ? region.xMax : region.xMin) - center.x) / direction.x;
+        float vertical = Mathf.Abs(direction.y) < .0001f ? float.PositiveInfinity :
+            ((direction.y > 0 ? region.yMax : region.yMin) - center.y) / direction.y;
+        Vector2 anchor = center + direction * Mathf.Min(horizontal, vertical);
+        Vector2 side = new Vector2(-direction.y, direction.x);
+        Vector2 tip = anchor + direction * 9;
+        OutlinedLine(anchor - direction * 7 + side * 7, tip, Sage, 3, 1.5f);
+        OutlinedLine(anchor - direction * 7 - side * 7, tip, Sage, 3, 1.5f);
+        Vector2 label = anchor - direction * 42;
+        Fill(new Rect(label.x - 46, label.y - 14, 92, 28), Ink);
+        Text(label.x - 43, label.y - 12, 86, 24, "ÇIKIŞ", centered);
     }
 
     private static void Line(Vector2 from, Vector2 to, Color color, float thickness)
@@ -358,7 +418,7 @@ public sealed class VillaHUD : MonoBehaviour
 
         if (settings)
         {
-            DrawSettings(left + 28, top + 286);
+            DrawSettings(left + 28, top + 250);
             return;
         }
 
@@ -438,23 +498,53 @@ public sealed class VillaHUD : MonoBehaviour
     private void DrawSettings(float x, float y)
     {
         Text(x, y, 720, 43, "AYARLAR", heading);
-        float percent = Mathf.InverseLerp(.03f, .3f, mission.Sensitivity);
-        Text(x, y + 69, 540, 34, "Fare hassasiyeti", normal);
-        Text(x + 560, y + 73, 160, 30, Mathf.RoundToInt(percent * 100) + " / 100", rightSmall);
-        Slider(0, mission.Sensitivity, .03f, .3f);
+        for (int index = 0; index < SettingsSliderCount; index++)
+        {
+            float value = SettingValue(index);
+            float row = y + 64 + index * 78;
+            string readout = index == 0 ? Mathf.RoundToInt(Mathf.InverseLerp(.03f, .3f, value) * 100) + " / 100" :
+                index == 1 ? "%" + Mathf.RoundToInt(value * 100) :
+                index == 2 ? Mathf.RoundToInt(value) + "°" : "%" + Mathf.RoundToInt(value * 100);
+            Text(x, row, 540, 34, SettingLabels[index], normal);
+            Text(x + 560, row + 4, 160, 30, readout, rightSmall);
+            Slider(index, value, SettingMinimums[index], SettingMaximums[index]);
+        }
 
-        Text(x, y + 174, 540, 34, "Ana ses", normal);
-        Text(x + 560, y + 178, 160, 30, "%" + Mathf.RoundToInt(mission.Volume * 100), rightSmall);
-        Slider(1, mission.Volume, 0f, 1f);
+        Button(4, "KAMERA TEPKİSİ");
+        Text(x + 410, y + 403, 180, 26, mission.CameraShake ? "AÇIK" : "KAPALI", rightSmall);
+        Fill(new Rect(x + 613, y + 401, 79, 24), mission.CameraShake ? Sage : new Color(.25f, .33f, .34f));
+        Fill(new Rect(x + (mission.CameraShake ? 669 : 617), y + 405, 19, 16), Cream);
+        Text(x, y + 452, 720, 50, Time.unscaledTime < defaultsNoticeUntil ?
+            "Varsayılan ayarlar yüklendi. ↑ ↓ seç, ← → ayarla; Esc ile geri dön." : SettingsHint(), small);
+        Button(5, "VARSAYILANLAR");
+        Button(6, "GERİ");
+    }
 
-        Button(2, "KAMERA TEPKİSİ");
-        Text(x + 410, y + 303, 180, 26, mission.CameraShake ? "AÇIK" : "KAPALI", rightSmall);
-        Fill(new Rect(x + 613, y + 301, 79, 24), mission.CameraShake ? Sage : new Color(.25f, .33f, .34f));
-        Fill(new Rect(x + (mission.CameraShake ? 669 : 617), y + 305, 19, 16), Cream);
-        Text(x, y + 359, 720, 60,
-            "Kamera tepkisi, ateş ederken oluşan bakış hareketini açar. Kapattığında isabet ve hasar göstergeleri görünmeye devam eder.", small);
-        Button(3, "GERİ");
-        Text(x + 370, y + 443, 350, 35, "← →  AYARLA     ESC  GERİ", small);
+    private float SettingValue(int index)
+    {
+        if (index == 0) return mission.Sensitivity;
+        if (index == 1) return mission.Volume;
+        if (index == 2) return mission.FieldOfView;
+        return mission.ReticleScale;
+    }
+
+    private void SetSettingValue(int index, float value)
+    {
+        value = Mathf.Clamp(value, SettingMinimums[index], SettingMaximums[index]);
+        if (index == 0) mission.Sensitivity = value;
+        else if (index == 1) { mission.Volume = value; AudioListener.volume = value; }
+        else if (index == 2) mission.FieldOfView = value;
+        else mission.ReticleScale = value;
+    }
+
+    private string SettingsHint()
+    {
+        if (selected == 2) return "Daha geniş görüş açısı çevreyi daha fazla gösterir. ↑ ↓ seç, ← → ayarla.";
+        if (selected == 3) return "Nişangâhın boyutu değişir; atışın isabeti değişmez. ↑ ↓ seç, ← → ayarla.";
+        if (selected == 4) return "Kapalıyken ateş bakışı itmez; isabet ve hasar göstergeleri kalır. Enter ile değiştir.";
+        if (selected == 5) return "Fare, ses, görüş açısı, nişangâh ve kamera ilk ayarlarına döner.";
+        if (selected == 6) return "Seçimlerini kaydederek geri dön. Esc de aynı işlemi yapar.";
+        return "↑ ↓ seç, ← → ayarla. Seçimlerin ayarlardan çıkınca kaydedilir.";
     }
 
     private void Slider(int index, float value, float min, float max)
@@ -506,13 +596,8 @@ public sealed class VillaHUD : MonoBehaviour
             bool fresh = direction != adjustDirection;
             adjustDirection = direction;
             nextAdjust = Time.unscaledTime + (fresh ? .35f : .07f);
-            if (selected == 0) mission.Sensitivity = Mathf.Clamp(mission.Sensitivity + direction * .01f, .03f, .3f);
-            else if (selected == 1)
-            {
-                mission.Volume = Mathf.Clamp01(mission.Volume + direction * .05f);
-                AudioListener.volume = mission.Volume;
-            }
-            else if (selected == 2) mission.CameraShake = direction > 0;
+            if (selected < SettingsSliderCount) SetSettingValue(selected, SettingValue(selected) + direction * SettingSteps[selected]);
+            else if (selected == 4) mission.CameraShake = direction > 0;
         }
         return false;
     }
@@ -523,8 +608,14 @@ public sealed class VillaHUD : MonoBehaviour
         if (!settings) { Activate(index); return; }
         clearFocus = true;
         ResetPointerCapture();
-        if (index == 2) mission.CameraShake = !mission.CameraShake;
-        else if (index == 3) TryHandleEscape();
+        if (index == 4) mission.CameraShake = !mission.CameraShake;
+        else if (index == 5)
+        {
+            mission.ResetSettings();
+            AudioListener.volume = mission.Volume;
+            defaultsNoticeUntil = Time.unscaledTime + 2.5f;
+        }
+        else if (index == 6) TryHandleEscape();
     }
 
     private void Activate(int index)

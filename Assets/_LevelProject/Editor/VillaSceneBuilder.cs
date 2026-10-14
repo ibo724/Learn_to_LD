@@ -25,13 +25,14 @@ public static class VillaSceneBuilder
     private static Transform decoration;
     private static Terrain terrain;
     private static string sourceHashBefore;
+    private static Mesh environmentBevel;
 
     [MenuItem("Tools/Villa FPS/Prepare game scene")]
     public static void Prepare()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play mode before preparing the scene.");
         if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-        foreach (string folder in new[] { "Scenes", "Materials", "Prefabs", "Meshes", "Terrain", "Navigation", "Audio" }) EnsureFolder(RootPath + "/" + folder);
+        foreach (string folder in new[] { "Scenes", "Materials", "Prefabs", "Meshes", "Terrain", "Navigation", "Audio", "Settings" }) EnsureFolder(RootPath + "/" + folder);
         BackupGeneratedScene();
         sourceHashBefore = SourceHash();
         Scene scene = EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);
@@ -52,6 +53,7 @@ public static class VillaSceneBuilder
 
         GameObject rig = new GameObject("Villa Mission");
         VillaMission mission = rig.AddComponent<VillaMission>();
+        mission.balance=BalanceAsset();
         mission.renderPipeline = VillaRendering.CreatePipeline();
         mission.sceneCamera = Camera.main;
         if (mission.sceneCamera == null)
@@ -73,6 +75,12 @@ public static class VillaSceneBuilder
         mission.extraction = Marker("Extraction", new Vector3(127.6f, Ground(127.6f, -16.4f) + .05f, -16.4f), rig.transform);
         Extraction(mission.extraction);
         mission.cues = VillaAudioFactory.CreateCues();
+        AudioClip[] loops=VillaAudioFactory.CreateAmbience();
+        VillaAmbience ambience=rig.AddComponent<VillaAmbience>();
+        ambience.mission=mission; ambience.wind=loops[0]; ambience.water=loops[1];
+        Transform poolWater=decoration.Find("Pool Water");
+        ambience.poolPosition=poolWater!=null ? poolWater.position : new Vector3(141.185f,.45f,4.293f);
+        ambience.interiorBounds=new Bounds(new Vector3(138.1f,3.4f,-6.74f),new Vector3(10.3f,6.3f,10.7f));
         mission.weaponPrefab = VillaModelFactory.Weapon(dark, copper, ivory, tracer);
         GameObject guardPrefab = VillaModelFactory.Guard(trim, terracotta, gold, dark);
         NavMeshSurface surface = BakeNavigation(rig);
@@ -95,6 +103,7 @@ public static class VillaSceneBuilder
             VillaGuard guard = obj.GetComponent<VillaGuard>();
             guard.shotClip = mission.cues[0]; guard.alertClip = mission.cues[7]; guard.tracerMaterial = tracer;
             guard.footstepClip = mission.cues[6];
+            guard.grassFootstepClip=mission.cues[13];
             // Short routes stay within the assigned room or garden lane.
             Vector3 routeOffset = i == 0 ? new Vector3(0,0,2.1f) : i == 1 ? new Vector3(0,0,2f)
                 : i == 5 ? new Vector3(0,0,1.2f) : new Vector3(.55f,0,0);
@@ -153,6 +162,17 @@ public static class VillaSceneBuilder
         Material freshTracer = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         freshTracer.SetColor("_BaseColor",VillaArt.Hex("F2BB67"));
         tracer = VillaArt.SaveMaterial(freshTracer,"Shot Trace");
+        environmentBevel=VillaModelFactory.EnvironmentBevelMesh();
+    }
+
+    private static VillaBalance BalanceAsset()
+    {
+        const string path=RootPath+"/Settings/Villa Balance.asset";
+        VillaBalance asset=AssetDatabase.LoadAssetAtPath<VillaBalance>(path);
+        if (asset != null) return asset;
+        asset=ScriptableObject.CreateInstance<VillaBalance>(); asset.name="Villa Balance";
+        AssetDatabase.CreateAsset(asset,path);
+        return asset;
     }
 
     private static void HidePracticeObjects()
@@ -309,11 +329,41 @@ public static class VillaSceneBuilder
         // Furnishings are sparse, with generous clearance around all doorways and stairs.
         Box("Kitchen island",new Vector3(135.1f,1.05f,-5.1f),new Vector3(1.55f,1f,.75f),trim);
         Box("Kitchen counter",new Vector3(135.1f,1.58f,-5.1f),new Vector3(1.67f,.12f,.85f),ivory);
+        for (int i=0;i<2;i++)
+        {
+            Box("Kitchen drawer",new Vector3(135.1f,.89f+i*.34f,-5.49f),new Vector3(1.36f,.29f,.035f),trim,false);
+            Box("Kitchen drawer handle",new Vector3(135.1f,.93f+i*.34f,-5.525f),new Vector3(.24f,.025f,.035f),copper,false);
+        }
+        Box("Kitchen tray",new Vector3(134.7f,1.66f,-5.1f),new Vector3(.42f,.035f,.32f),copper,false);
+        Box("Kitchen cup",new Vector3(134.7f,1.76f,-5.1f),new Vector3(.12f,.17f,.12f),ivory,false);
         Box("Lounge low cabinet",new Vector3(141.45f,1.1f,-11.15f),new Vector3(2f,1.1f,.55f),trim);
         Box("Lounge cabinet top",new Vector3(141.45f,1.7f,-11.15f),new Vector3(2.1f,.1f,.65f),stone);
-        Box("Upper archive",new Vector3(133.6f,4.56f,-11.4f),new Vector3(.65f,1.8f,.65f),trim);
-        Box("Upper archive band",new Vector3(133.6f,4.65f,-11.74f),new Vector3(.5f,.12f,.025f),copper,false);
-        for (int i=0;i<3;i++) Box("Archive shelf",new Vector3(133.6f,4.05f+i*.48f,-11.4f),new Vector3(.72f,.06f,.72f),stone,false);
+        for (int i=0;i<3;i++)
+        {
+            Box("Lounge cabinet panel",new Vector3(140.8f+i*.65f,1.1f,-10.858f),new Vector3(.6f,.93f,.03f),trim,false);
+            Box("Lounge cabinet handle",new Vector3(140.8f+i*.65f,1.4f,-10.828f),new Vector3(.16f,.025f,.035f),copper,false);
+        }
+        Box("Upper archive back",new Vector3(133.6f,4.56f,-11.72f),new Vector3(.72f,1.8f,.06f),trim);
+        for (int side=-1;side<=1;side+=2)
+            Box("Upper archive side",new Vector3(133.6f+side*.34f,4.56f,-11.4f),new Vector3(.055f,1.8f,.72f),trim);
+        Material[] bookColors={ivory,terracotta,copper,stone,trim};
+        for (int level=0;level<4;level++)
+        {
+            float shelfY=3.72f+level*.56f;
+            Box("Archive shelf",new Vector3(133.6f,shelfY,-11.4f),new Vector3(.72f,.06f,.72f),stone);
+            if (level==3) continue;
+            for (int book=0;book<5;book++)
+            {
+                float bookHeight=.29f+((book+level)%3)*.04f;
+                Box("Archive book",new Vector3(133.36f+book*.11f,shelfY+.03f+bookHeight*.5f,-11.39f),
+                    new Vector3(.075f,bookHeight,.33f),bookColors[(book+level)%bookColors.Length],false);
+            }
+        }
+        // A quiet geometric wall panel follows the same palette as the furniture.
+        Box("Kitchen wall panel frame",new Vector3(133.205f,2.22f,-3.2f),new Vector3(.035f,.85f,.95f),trim,false);
+        Box("Kitchen wall panel field",new Vector3(133.231f,2.22f,-3.2f),new Vector3(.02f,.72f,.82f),ivory,false);
+        Box("Kitchen wall panel copper",new Vector3(133.245f,2.27f,-3.42f),new Vector3(.01f,.42f,.17f),copper,false);
+        Box("Kitchen wall panel green",new Vector3(133.246f,2.05f,-3.1f),new Vector3(.01f,.11f,.4f),foliage,false);
         Box("Data desk",new Vector3(141.6f,4.54f,-10.85f),new Vector3(1.6f,.12f,.7f),ivory);
         Box("Data desk left support",new Vector3(140.98f,4.05f,-10.85f),new Vector3(.13f,.9f,.58f),trim);
         Box("Data desk right support",new Vector3(142.22f,4.05f,-10.85f),new Vector3(.13f,.9f,.58f),trim);
@@ -557,6 +607,12 @@ public static class VillaSceneBuilder
         GameObject obj=GameObject.CreatePrimitive(PrimitiveType.Cube); obj.name=name;
         obj.transform.SetParent(parent != null ? parent : decoration); obj.transform.position=position; obj.transform.localScale=size;
         obj.GetComponent<Renderer>().sharedMaterial=material;
+        if (environmentBevel!=null && new[]{"crate","cabinet","counter","desk","device","island","bench","archive"}
+            .Any(word=>name.IndexOf(word,StringComparison.OrdinalIgnoreCase)>=0))
+        {
+            obj.GetComponent<MeshFilter>().sharedMesh=environmentBevel;
+            if (solid) obj.AddComponent<VillaBevelSurface>();
+        }
         if (decoration != null && obj.transform.IsChildOf(decoration))
             GameObjectUtility.SetStaticEditorFlags(obj,StaticEditorFlags.BatchingStatic);
         if (!solid) Object.DestroyImmediate(obj.GetComponent<Collider>());
