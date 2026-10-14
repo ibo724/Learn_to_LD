@@ -11,6 +11,9 @@ public static class LevelPlaytestBootstrap
     {
         LevelDoor.PrepareSceneDoors();
 
+        if (Object.FindFirstObjectByType<VillaMission>() != null)
+            return;
+
         if (Object.FindFirstObjectByType<LevelPlaytestController>() != null)
             return;
 

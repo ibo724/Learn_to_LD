@@ -26,6 +26,20 @@ public sealed class LevelPlaytestController : MonoBehaviour
     private float pitch;
     private bool hasFocus = true;
     private bool skipMouseDelta;
+    public bool ExternalControl { get; set; }
+    public Camera ViewCamera => playerCamera;
+    public float LookSensitivity { get => mouseSensitivity; set => mouseSensitivity = value; }
+    public bool Grounded => character != null && character.isGrounded;
+
+    public void SetCursorCaptured(bool captured)
+    {
+        if (captured) CaptureCursor(); else ReleaseCursor();
+    }
+
+    public void AddRecoil(float degrees)
+    {
+        pitch = Mathf.Clamp(pitch - degrees, -85f, 85f);
+    }
 
     private void Awake()
     {
@@ -72,7 +86,7 @@ public sealed class LevelPlaytestController : MonoBehaviour
 
     private void Update()
     {
-        if (playerCamera == null)
+        if (playerCamera == null || ExternalControl)
             return;
 
         Keyboard keyboard = Keyboard.current;
@@ -149,7 +163,7 @@ public sealed class LevelPlaytestController : MonoBehaviour
         if ((collisions & CollisionFlags.Below) != 0 && verticalSpeed < 0f)
             verticalSpeed = -2f;
 
-        if (transform.position.y < spawnPosition.y - 15f)
+        if (!ExternalControl && transform.position.y < spawnPosition.y - 15f)
             ResetToSpawn();
     }
 
