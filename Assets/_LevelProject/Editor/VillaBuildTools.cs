@@ -13,12 +13,13 @@ using VillaFPS.Editor;
 /// <summary>Editor-only preparation and Windows compilation. Never starts a player.</summary>
 public static class VillaBuildTools
 {
-    private const string PrototypeVersion="0.2.0";
+    private const string PrototypeVersion="0.2.1";
     [MenuItem("Tools/Villa FPS/Build Windows prototype")]
     public static void BuildWindows()
     {
         if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play before building.");
         if (!File.Exists(VillaSceneBuilder.GameScene)) throw new InvalidOperationException("Prepare the FPS scene first.");
+        string balancePath=ReadSceneBalancePath();
         string buildRoot=Path.GetFullPath(Path.Combine(Application.dataPath,"../Builds"));
         string destination=Path.Combine(buildRoot,"Villa_Operation");
         string folder=Path.Combine(buildRoot,"Villa_Operation_Staging_"+DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
@@ -63,7 +64,7 @@ public static class VillaBuildTools
                     foreach (BuildStepMessage message in step.messages)
                         if (message.type == LogType.Warning || message.type == LogType.Error || message.type == LogType.Exception)
                             messages.WriteLine(step.name + ": " + message.type + ": " + message.content);
-            if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException("Windows build failed; inspect Logs/VillaFPS-build.log.");
+            if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException("Windows build failed; inspect Logs/VillaFPS/windows-build.txt and build-messages.txt.");
             File.WriteAllText(folder + "/BASLAMADAN_ONCE.txt",
                 "VILLA OPERASYONU "+PrototypeVersion+"\r\n\r\nVilla_Operation.exe dosyasini calistirin. Data klasoru ve DLL dosyalari ayni klasorde kalmali.\r\n"
                 + "WASD hareket, fare bakis, sol tik ates, sag tik nisan, Shift kosu, Space ziplama, R doldurma, E etkilesim, Esc duraklatma.\r\n"
@@ -73,7 +74,8 @@ public static class VillaBuildTools
             {
                 version=PrototypeVersion,engine=Application.unityVersion,builtUtc=DateTime.UtcNow.ToString("O"),
                 scene=VillaSceneBuilder.GameScene,sourceSha256=HashFile(VillaSceneBuilder.SourceScene),
-                sceneSha256=HashFile(VillaSceneBuilder.GameScene),balanceSha256=HashFile("Assets/_LevelProject/FPS/Settings/Villa Balance.asset"),
+                sceneSha256=HashFile(VillaSceneBuilder.GameScene),balance=balancePath,
+                balanceSha256=string.IsNullOrEmpty(balancePath) ? "RUNTIME DEFAULT" : HashFile(balancePath),
                 buildResult=report.summary.result.ToString(),errors=report.summary.totalErrors,warnings=report.summary.totalWarnings,
                 sizeBytes=report.summary.totalSize,manualVerification="NOT RUN"
             },true));
@@ -102,9 +104,27 @@ public static class VillaBuildTools
 
     [Serializable] private class BuildReceipt
     {
-        public string version,engine,builtUtc,scene,sourceSha256,sceneSha256,balanceSha256,buildResult,manualVerification;
+        public string version,engine,builtUtc,scene,sourceSha256,sceneSha256,balance,balanceSha256,buildResult,manualVerification;
         public int errors,warnings;
         public ulong sizeBytes;
+    }
+    private static string ReadSceneBalancePath()
+    {
+        // Read the saved scene used by BuildPlayer, without replacing the user's open scene.
+        var preview=EditorSceneManager.OpenPreviewScene(VillaSceneBuilder.GameScene);
+        try
+        {
+            VillaMission found=null;
+            foreach (GameObject root in preview.GetRootGameObjects())
+                foreach (VillaMission mission in root.GetComponentsInChildren<VillaMission>(true))
+                {
+                    if (found != null) throw new InvalidOperationException("The FPS scene contains more than one mission.");
+                    found=mission;
+                }
+            if (found == null) throw new InvalidOperationException("The saved FPS scene has no mission.");
+            return found.balance != null ? AssetDatabase.GetAssetPath(found.balance) : string.Empty;
+        }
+        finally { EditorSceneManager.ClosePreviewScene(preview); }
     }
     private static string HashFile(string path)
     {

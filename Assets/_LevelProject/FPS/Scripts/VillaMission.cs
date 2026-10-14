@@ -181,10 +181,11 @@ public sealed class VillaMission : MonoBehaviour
         }
         LevelDoor.SyncMovedColliders();
         VillaQueries.SyncTransforms();
+        Weapon.PrepareInput(mouse != null && mouse.rightButton.isPressed, sprint, reload);
         Player.MoveCharacter(move * (Weapon.Aiming ? .65f : 1f), sprint, jump, Mathf.Min(Time.deltaTime, .1f));
         float horizontalSpeed=Player.HorizontalSpeed;
         Weapon.Tick(mouse != null && mouse.leftButton.isPressed && Time.unscaledTime > suppressFireUntil,
-            mouse != null && mouse.rightButton.isPressed, sprint, reload,Mathf.Clamp01(horizontalSpeed/Balance.WalkSpeed));
+            sprint,Mathf.Clamp01(horizontalSpeed/Balance.WalkSpeed));
         UpdateInteraction(keyboard != null && keyboard.eKey.wasPressedThisFrame);
         if (horizontalSpeed > .2f && Player.Grounded && Time.time > nextStep)
         {

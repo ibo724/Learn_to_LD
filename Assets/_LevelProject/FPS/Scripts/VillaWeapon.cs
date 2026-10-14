@@ -101,12 +101,12 @@ public sealed class VillaWeapon : MonoBehaviour
         mission.PlayCue(1);
     }
 
-    public void Tick(bool fire, bool aim, bool sprint, bool reload, float movement)
+    // Resolve the current frame's input before movement; fire only after the player moves.
+    public void PrepareInput(bool aim, bool sprint, bool reload)
     {
         if (!CanOperate)
         {
             Aiming = false;
-            HideFlash();
             return;
         }
 
@@ -122,6 +122,17 @@ public sealed class VillaWeapon : MonoBehaviour
         }
 
         Aiming = aim && !sprint && !reloading;
+    }
+
+    public void Tick(bool fire, bool sprint, float movement)
+    {
+        if (!CanOperate)
+        {
+            Aiming = false;
+            HideFlash();
+            return;
+        }
+
         float hipFieldOfView = Mathf.Clamp(mission.FieldOfView, 60f, 90f);
         cameraToUse.fieldOfView = Mathf.Lerp(cameraToUse.fieldOfView, Aiming ? hipFieldOfView * (55f / 70f) : hipFieldOfView,
             1f - Mathf.Exp(-12f * Time.deltaTime));

@@ -33,7 +33,9 @@ public sealed class VillaHUD : MonoBehaviour
     private float defaultsNoticeUntil;
     private int lastScreenWidth, lastScreenHeight;
 
-    private int ControlCount => settings ? 7 : mission.State != VillaMission.Phase.Briefing ? 4 : 3;
+    private int SettingsEntryIndex => mission != null && mission.State == VillaMission.Phase.Paused ? 2 : 1;
+    private int ControlCount => settings ? 7 : mission.State == VillaMission.Phase.Paused ? 5 :
+        mission.State != VillaMission.Phase.Briefing ? 4 : 3;
 
     // Mission calls this before its pause/resume shortcut so Esc first leaves settings.
     public bool TryHandleEscape()
@@ -41,7 +43,7 @@ public sealed class VillaHUD : MonoBehaviour
         if (!settings) return false;
         if (mission != null) mission.SaveSettings();
         settings = false;
-        selected = 1;
+        selected = SettingsEntryIndex;
         clearFocus = true;
         ResetPointerCapture();
         return true;
@@ -112,6 +114,11 @@ public sealed class VillaHUD : MonoBehaviour
         }
         float buttonsY = top + 555;
         if (index == 0) return new Rect(x, buttonsY, 720, 60);
+        if (mission.State == VillaMission.Phase.Paused)
+        {
+            int slot = index - 1;
+            return new Rect(x + (slot % 2) * 370, buttonsY + 76 + (slot / 2) * 72, 350, 56);
+        }
         if (index == 1) return new Rect(x, buttonsY + 76, 350, 56);
         if (index == 2 && mission.State != VillaMission.Phase.Briefing)
             return new Rect(left + 398, buttonsY + 76, 350, 56);
@@ -448,11 +455,21 @@ public sealed class VillaHUD : MonoBehaviour
         }
 
         Button(0, paused ? "DEVAM ET" : won || lost ? "YENİDEN DENE" : "OPERASYONU BAŞLAT", true);
-        Button(1, "AYARLAR");
-        bool briefing = mission.State == VillaMission.Phase.Briefing;
-        if (!briefing) Button(2, "BAŞLANGICA DÖN");
-        int quitIndex = briefing ? 2 : 3;
-        Button(quitIndex, "OYUNDAN ÇIK");
+        if (paused)
+        {
+            Button(1, "YENİDEN BAŞLAT");
+            Button(2, "AYARLAR");
+            Button(3, "ANA MENÜ");
+            Button(4, "OYUNDAN ÇIK");
+        }
+        else
+        {
+            Button(1, "AYARLAR");
+            bool briefing = mission.State == VillaMission.Phase.Briefing;
+            if (!briefing) Button(2, "BAŞLANGICA DÖN");
+            int quitIndex = briefing ? 2 : 3;
+            Button(quitIndex, "OYUNDAN ÇIK");
+        }
         Text(left + 28, top + 765, 720, 30, "↑ ↓  SEÇ     ENTER  ONAYLA", small);
     }
 
@@ -621,15 +638,30 @@ public sealed class VillaHUD : MonoBehaviour
     private void Activate(int index)
     {
         clearFocus = true;
+        if (mission.State == VillaMission.Phase.Paused)
+        {
+            if (index == 0) mission.Resume();
+            else if (index == 1) mission.Restart();
+            else if (index == 2) OpenSettings();
+            else if (index == 3) mission.Briefing();
+            else if (index == 4) mission.Quit();
+            return;
+        }
         if (index == 0)
         {
             if (mission.State == VillaMission.Phase.Briefing) mission.Begin();
-            else if (mission.State == VillaMission.Phase.Paused) mission.Resume();
             else mission.Restart();
         }
-        else if (index == 1) { settings = true; selected = 0; ResetPointerCapture(); }
+        else if (index == 1) OpenSettings();
         else if (mission.State == VillaMission.Phase.Briefing || index == 3) mission.Quit();
         else mission.Briefing();
+    }
+
+    private void OpenSettings()
+    {
+        settings = true;
+        selected = 0;
+        ResetPointerCapture();
     }
 
     private string GuardProgress()

@@ -4,7 +4,7 @@
 
 **Manuel kontrol durumu: NOT RUN — henüz uygulanmadı.** Oyun başlatma, menü tıklamaları, klavye, hassasiyet/ses ayarları, odak değişimi ve aşağıdaki mekanikler senin kontrolünü bekliyor. Windows derlemesinin oluşturulmuş olması bu kontrollerin yapıldığı anlamına gelmez.
 
-Liste 0.2.0 prototipinin kontrollerini içerir. Sayısal beklentiler varsayılan **Villa Balance** profiline göredir; profili değiştirirsen yeni değerleri kontrol notuna yaz. Eklenen FOV, nişangâh, efekt ve ortam sesi maddelerinin durumu da **NOT RUN**. İlk 15–20 dakikalık turda yetişmeyen kutuları boş bırakabilirsin.
+Liste 0.2.1 prototipinin kontrollerini içerir. Sayısal beklentiler varsayılan **Villa Balance** profiline göredir; profili değiştirirsen yeni değerleri kontrol notuna yaz. Eklenen FOV, nişangâh, efekt ve ortam sesi maddelerinin durumu da **NOT RUN**. İlk 15–20 dakikalık turda yetişmeyen kutuları boş bırakabilirsin.
 
 ## Başlatmak için iki seçenek
 
@@ -33,6 +33,7 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 - [ ] Silah modeli ekranda görünmeli; duvara yaklaşınca görüntü tamamen kaybolmamalı veya ekranı kaplamamalı.
 - [ ] Sol tıkla beş atış yap: şarjör `25`, yedek `90` olmalı. Tetik basılı tutulunca ateş devam etmeli.
 - [ ] Sağ tıkla nişan al: görüş yakınlaşmalı, nişangâh sadeleşmeli. Bırakınca normal görüşe dönmeli.
+- [ ] **NOT RUN — 0.2.1:** Yürürken sağ tıkla nişana gir/çık, nişandayken Shift ile koşuya geç ve R ile doldur. Hareket hızı o karenin nişan/koşu/doldurma durumuna göre değişmeli; eski nişan durumundan kalan bir karelik hız kullanılmamalı. Dolu şarjörde R nişanı kesmemeli, doldurma tamamlanınca mühimmat ve bitiş sesi yalnız bir kez işlenmeli.
 - [ ] **R** ile doldur: yaklaşık iki saniyede şarjör `30`, yedek `85` olmalı. Doldurma sırasında ateş etmemeli.
 - [ ] **NOT RUN:** Doldururken silahın şarjör parçası hareket edip yerine dönmeli; namlu parlaması yalnız atış anında kısa görünmeli. Duraklatma/sonuç ekranında parıltı takılı kalmamalı.
 - [ ] **NOT RUN:** Doldurma gerçekten tamamlanıp mühimmat şarjöre aktarıldığında kısa bir hazır klik sesi duyulmalı. Baştaki mekanizma sesiyle bu bitiş sesini ayır; duraklatılmış doldurma kendi kendine bitiş sesi üretmemeli.
@@ -42,6 +43,7 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 ## 3. Duraklatma ve ayarlar — 5–7 dakika
 
 - [ ] **Esc** ile duraklat. Fare serbest kalmalı; muhafız hareketi, ateş ve görev süresi durmalı.
+- [ ] **NOT RUN:** Duraklatma menüsünde **Devam Et**, **Yeniden Başlat**, **Ayarlar**, **Ana Menü** ve **Oyundan Çık** görünmeli. Fare ve klavye gezintisi beş seçeneği doğru eyleme bağlamalı; Ayarlar'dan Geri/Esc ile dönünce seçim yeniden Ayarlar üzerinde olmalı.
 - [ ] **Ayarlar** içinde fare hassasiyetini değiştir, sesi azalt ve kamera tepkisini kapat. Fareyle düğmelerin tamamı çalışmalı.
 - [ ] **NOT RUN:** **Görüş açısı (dikey)** değerini `60°` ve `90°` arasında değiştir. Oyuna dönünce görüşün genişliği değişmeli; sağ tıkla nişan alıp bırakınca seçtiğin açıya geri gelmeli.
 - [ ] **NOT RUN:** **Nişangâh boyutu** değerini `%100–%175` arasında değiştir. Merkez işareti ve isabet X'i büyümeli; açık renkli duvarda koyu kenar okunaklı kalmalı. Bu ayar atış hasarını değiştirmemeli.
@@ -86,6 +88,7 @@ Paket 1280×720 pencereli ve pencere boyutu değiştirilebilir biçimde hazırla
 
 ## 7. Yeniden dene ve kaybetme — 16–18 dakika
 
+- [ ] **NOT RUN:** Görev sürerken Esc → **Yeniden Başlat** seç. Başarı/başarısızlık ekranına uğramadan yeni görev başlamalı; can, mühimmat, süre, veri cihazı, paketler ve muhafızlar başlangıç durumuna dönmeli. Oyuncu tercihlerin korunmalı. Esc → **Ana Menü** ise görev özeti ekranına götürmeli.
 - [ ] Başarı ekranından **Yeniden Dene**: doğrudan yeni görev başlamalı. Can `100`, mühimmat `30 / 090`, süre ve muhafız sayacı sıfır; veri cihazı ve paketler yeniden yerlerinde olmalı. Yedek muhafız tekrar pasif başlamalı.
 - [ ] Bu yeni denemede muhafızdan hasar alarak canı sıfıra indir: başarısızlık ekranı açılmalı, ateş ve hareket durmalı.
 - [ ] Başarısızlıktan **Yeniden Dene** aynı başlangıç sıfırlamasını yapmalı. **Başlangıca Dön** ise görev özeti ekranına götürmeli.

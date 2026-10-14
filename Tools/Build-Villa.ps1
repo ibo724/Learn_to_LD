@@ -9,7 +9,13 @@ $villaProjectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $villaSourceScene = Join-Path $villaProjectRoot 'Assets\_LevelProject\Scenes 1\Industrial_Level_01.unity'
 $villaSourceHash = (Get-FileHash -LiteralPath $villaSourceScene -Algorithm SHA256).Hash
 if (-not (Test-Path -LiteralPath $UnityEditorPath -PathType Leaf)) { throw "Unity editor not found: $UnityEditorPath" }
-if (Get-Process -Name Unity -ErrorAction SilentlyContinue) { throw 'Close the Unity Editor before running the batch build. No existing editor will be stopped.' }
+$villaLockPath = Join-Path $villaProjectRoot 'Temp\UnityLockfile'
+if (Test-Path -LiteralPath $villaLockPath -PathType Leaf) {
+    $villaLockHandle = $null
+    try { $villaLockHandle = [IO.File]::Open($villaLockPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None) }
+    catch [IO.IOException] { throw 'The project is open in Unity. Save and close that editor before the batch build.' }
+    finally { if ($null -ne $villaLockHandle) { $villaLockHandle.Dispose() } }
+}
 
 # Preserve project-wide files that Unity can migrate or rewrite while preparing a player.
 # New FPS assets, the generated scene, build settings, and the four FPS layers remain saved.

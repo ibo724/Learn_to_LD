@@ -368,6 +368,20 @@ public static class VillaSceneBuilder
         Box("Data desk left support",new Vector3(140.98f,4.05f,-10.85f),new Vector3(.13f,.9f,.58f),trim);
         Box("Data desk right support",new Vector3(142.22f,4.05f,-10.85f),new Vector3(.13f,.9f,.58f),trim);
         Label("Archive label","ARŞİV / 02",new Vector3(137.35f,5.9f,-9.81f),Quaternion.identity,.07f,trim);
+        ArchiveWayfinding();
+    }
+
+    private static void ArchiveWayfinding()
+    {
+        // The lower corridor ceiling starts at y=3.326; the sign hangs clear of the walking lane.
+        Transform sign=Marker("Archive direction sign",new Vector3(138.5f,2.9f,-7.6f),decoration);
+        BoxLocal("Archive sign panel",sign,Vector3.zero,new Vector3(1.7f,.34f,.065f),trim,false);
+        for (int side=-1;side<=1;side+=2)
+            BoxLocal("Archive sign hanger",sign,new Vector3(side*.6f,.3f,0),new Vector3(.025f,.26f,.025f),copper,false);
+        BoxLocal("Archive sign accent",sign,new Vector3(-.76f,0,-.038f),new Vector3(.035f,.23f,.015f),copper,false);
+        // Facing the entrance: text alone avoids implying an unverified stair-turn direction.
+        Label("Archive direction label","ARŞİV / ÜST KAT",sign.position+new Vector3(-.66f,0,-.04f),
+            Quaternion.identity,.13f,ivory,sign);
     }
 
     private static Transform Objective(Transform parent)
@@ -643,7 +657,7 @@ public static class VillaSceneBuilder
     [Serializable] private class PreparationReport
     {
         public string scene, source, notes, sourceHashBefore, sourceHashAfter;
-        public int guards, pickups, navTriangles;
+        public int guards, pickups, navTriangles, guardPrefabRenderers, weaponPrefabRenderers;
         public Vector3 spawn, objective, extraction;
         public string[] shaderErrors, guardNavigation;
     }
@@ -663,6 +677,8 @@ public static class VillaSceneBuilder
             sourceHashBefore=sourceHashBefore,sourceHashAfter=SourceHash(),
             pickups=Object.FindObjectsByType<VillaPickup>(FindObjectsSortMode.None).Length,
             navTriangles=NavMesh.CalculateTriangulation().indices.Length/3,
+            guardPrefabRenderers=mission.guards.Length>0 ? mission.guards[0].GetComponentsInChildren<Renderer>(true).Length : 0,
+            weaponPrefabRenderers=mission.weaponPrefab.GetComponentsInChildren<Renderer>(true).Length,
             spawn=mission.spawn.position,objective=mission.objective.position,extraction=mission.extraction.position,
             shaderErrors=shaderErrors.ToArray(),
             guardNavigation=mission.guards.Select(g=>g.name+": "+NavMesh.SamplePosition(g.transform.position,out NavMeshHit hit,.4f,NavMesh.AllAreas)).ToArray(),

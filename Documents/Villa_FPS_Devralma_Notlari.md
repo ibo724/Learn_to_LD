@@ -9,6 +9,8 @@
 
 Paket klasöründeki exe, `Villa_Operation_Data` ve Unity dosyaları birlikte kalmalı. İlk denemede Unity'den yeniden sahne üretmen veya build alman gerekmez.
 
+Unity'de FPS sürümü için **Tools > Villa FPS > Open game scene** ile `Assets/_LevelProject/FPS/Scenes/Villa_Operation.unity` sahnesini aç. Kaynak `Industrial_Level_01.unity`, önceki level çalışman olarak ayrı tutulur. Alt kat koridoruna girişten okunması amaçlanan **ARŞİV / ÜST KAT** askılı levhası eklendi; levhanın görünürlüğü, yazı boyutu ve mimariye oturuşu için manuel görsel kontrol **NOT RUN**.
+
 Windows paketi 1280×720 pencereli ve yeniden boyutlandırılabilir biçimde hazırlanıyor. Bu build ayarları yalnız paket oluşturulurken uygulanır; kaynak projenin Player Settings değerleri sonrasında geri yüklenir.
 
 ## Bu sürümün kapsamı
@@ -20,6 +22,8 @@ Görsel yön krem, petrol mavisi, bakır ve adaçayı renklerinde stilize bir Ak
 Başlangıçta yedi muhafız etkin; veri alındığında bir yedek daha katılıyor. Sekizini de etkisizleştirmek zorunda değilsin. Can/mühimmat paketleri üzerinden geçerek, veri ve kapılar ise yakından bakıp E'ye basarak kullanılıyor.
 
 Fare hassasiyeti, ses seviyesi, kamera tepkisi, dikey FOV (`60–90°`) ve nişangâh boyutu (`%100–%175`) ayarlardan Geri/Esc ile çıkınca kaydedilir. Varsayılanlar düğmesi başlangıç tercihlerine döndürür. Amaç hem görevi yeniden başlattığında hem uygulamayı tamamen kapatıp açtığında seçimlerini korumak. **Bu kalıcılık kontrolü henüz yapılmadı (NOT RUN).** Görev ilerlemesi kaydedilmiyor; yeni açılış görev özetiyle başlıyor.
+
+Duraklatma menüsünde **Devam Et**, **Yeniden Başlat**, **Ayarlar**, **Ana Menü** ve **Oyundan Çık** bulunur. **Yeniden Başlat** mevcut görevi başlangıç durumuyla doğrudan açar; **Ana Menü** görev özetine döner. Ayarlardan geri dönüş ilgili Ayarlar seçimini korur. Bu menü eylemlerinin, sıfırlamanın ve tercihleri korumanın manuel kontrolü **NOT RUN**.
 
 Nişangâhta koyu kontrast kenarı, veri alındıktan sonra ekran dışındaki çıkışa küçük yön oku, kısa namlu parlaması, hareketli şarjör ve yüzey isabet izleri eklendi. Cam üzerindeki iz görsel geri bildirimdir; cam kırılmadan mermiyi durdurur. Yatay yönü olmayan hasar için nötr gösterge kullanılır. Bu görsel davranışların tamamı manuel kontrol bekliyor.
 
