@@ -27,6 +27,22 @@ public sealed class LDMeasureTests
         Assert.AreEqual(1f, LDRules.HeightAboveFloor(list, new Bounds(new Vector3(0, 2.4f, 0), new Vector3(3, 1.2f, 0.5f))), 1e-4f);
     }
 
+    [Test] public void Zemin_YuksekZemindekiNoktaIsaretiIcinBulunur() // boş Düşman girişi y=2 zeminin üstünde
+    {
+        var list = new List<LDPiece> { P(LDRoleType.Zemin, new Vector3(0, 1.9f, 0), new Vector3(20, 0.2f, 20)) };
+        Assert.AreEqual(2f, LDRules.FloorTopUnder(list, new Bounds(new Vector3(3, 2, 3), Vector3.zero)), 1e-4f);
+    }
+
+    [Test] public void Yukseklik_SahneyeDayaliSiperAnaZemindenOlculur() // 0,5 m sahne x 3..7, siper x 0..3 kenarına değiyor
+    {
+        var list = new List<LDPiece>
+        {
+            P(LDRoleType.Zemin, new Vector3(0, -0.1f, 0), new Vector3(20, 0.2f, 20)),
+            P(LDRoleType.Zemin, new Vector3(5, 0.25f, 0), new Vector3(4, 0.5f, 4))
+        };
+        Assert.AreEqual(1f, LDRules.HeightAboveFloor(list, new Bounds(new Vector3(1.5f, 0.5f, 0), new Vector3(3, 1, 0.5f))), 1e-4f);
+    }
+
     [Test] public void Yukseklik_ZeminYoksaSifirdanOlculur()
         => Assert.AreEqual(1f, LDRules.HeightAboveFloor(new List<LDPiece>(), new Bounds(new Vector3(0, 0.5f, 0), new Vector3(1, 1, 1))), 1e-4f);
 

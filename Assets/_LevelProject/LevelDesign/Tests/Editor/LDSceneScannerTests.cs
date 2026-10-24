@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public sealed class LDSceneScannerTests
 {
@@ -18,11 +20,26 @@ public sealed class LDSceneScannerTests
         return go;
     }
 
+    private Scene previous, scratch;
+
+    // The scanner reads the active scene, so tests run in an empty extra scene and leave a saved user scene alone.
+    // Unity can't add a scene next to an unsaved untitled one (as in batch runs); that scene is used as is.
+    [SetUp] public void SetUp()
+    {
+        previous = SceneManager.GetActiveScene();
+        if (string.IsNullOrEmpty(previous.path)) return;
+        scratch = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+        SceneManager.SetActiveScene(scratch);
+    }
+
     [TearDown] public void TearDown()
     {
         foreach (GameObject go in created)
             if (go != null) Object.DestroyImmediate(go);
         created.Clear();
+        if (!scratch.IsValid()) return;
+        SceneManager.SetActiveScene(previous);
+        EditorSceneManager.CloseScene(scratch, true);
     }
 
     private void Entrances()
@@ -47,6 +64,9 @@ public sealed class LDSceneScannerTests
         Assert.IsTrue(scan.SightLines.Single().Blocked);
         Assert.IsFalse(scan.Findings.Any(f => f.Rule == 9));
     }
+
+    [Test] public void RolsuzSahnedeNavMeshSorgulanmaz()
+        => Assert.IsFalse(LDSceneScanner.Scan().Findings.Any(f => f.Rule == 10));
 
     [Test] public void Kural10_NavMeshYoksaHata()
     {

@@ -36,7 +36,13 @@ public sealed class LDLessonWindow : EditorWindow
     private void OnGUI()
     {
         LDScanResult scan = LDScanService.Last;
-        tab = GUILayout.Toolbar(tab, Tabs);
+        int newTab = GUILayout.Toolbar(tab, Tabs);
+        if (newTab != tab)
+        {
+            // The rest of this event was laid out for the old tab; stop here and redraw.
+            tab = newTab;
+            GUIUtility.ExitGUI();
+        }
         if (scan.Pieces.Count == 0)
             EditorGUILayout.HelpBox("Sahnede rolü olan parça yok. Önce parçalara rol ver (aşağıdaki 'Rol ata' bölümü).", MessageType.Info);
 
@@ -70,8 +76,8 @@ public sealed class LDLessonWindow : EditorWindow
             var style = new GUIStyle(EditorStyles.label) { fontStyle = i == current ? FontStyle.Bold : FontStyle.Normal };
             if (GUILayout.Button($"{mark}  {step.Title}", style))
             {
-                current = i;
                 LDProgress.SetStep(lesson.Id, i);
+                GUIUtility.ExitGUI();
             }
         }
 

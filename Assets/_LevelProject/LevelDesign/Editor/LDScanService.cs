@@ -20,6 +20,9 @@ public static class LDScanService
         Undo.undoRedoPerformed += RequestScan;
         ObjectChangeEvents.changesPublished += OnChangesPublished;
         EditorSceneManager.activeSceneChangedInEditMode += (_, __) => RequestScan();
+        // Saving an untitled scene gives it a path but raises none of the change events above.
+        EditorSceneManager.sceneSaved += _ => RequestScan();
+        EditorSceneManager.sceneOpened += (_, __) => RequestScan();
         EditorApplication.playModeStateChanged += _ => RequestScan();
         EditorApplication.update += Update;
         RequestScan();

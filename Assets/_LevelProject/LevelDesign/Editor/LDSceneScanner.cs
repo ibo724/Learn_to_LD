@@ -29,6 +29,8 @@ public static class LDSceneScanner
         }
 
         LDScanResult result = LDScanResult.FromPieces(scene.path, pieces, unassigned);
+        // Scenes that don't use the tool (the Villa scenes) skip the costly physics and NavMesh queries.
+        if (pieces.Count == 0) return result;
         AddSightLines(result);
         AddNavigation(result);
         return result;

@@ -34,14 +34,24 @@ public static class LDRules
         float top = 0f;
         foreach (LDPiece piece in pieces)
         {
-            if (piece.Role != LDRoleType.Zemin || HorizontalGap(piece.Bounds, b) > 0f) continue;
+            if (piece.Role != LDRoleType.Zemin || !IsUnder(piece.Bounds, b)) continue;
             float floorTop = piece.Bounds.max.y;
-            // A floor above the piece's top is an upper storey, not what it stands on.
-            if (floorTop > b.max.y - Epsilon) continue;
+            // A floor above the piece's top is an upper storey, not what it stands on. A flat marker stands on its floor.
+            if (floorTop > Mathf.Max(b.max.y - Epsilon, b.min.y + Epsilon)) continue;
             if (!found || floorTop > top) top = floorTop;
             found = true;
         }
         return top;
+    }
+
+    // The floor holds the piece's centre, or really overlaps it from above (merely touching edges does not count).
+    private static bool IsUnder(Bounds floor, Bounds b)
+    {
+        Vector3 c = b.center;
+        if (c.x >= floor.min.x && c.x <= floor.max.x && c.z >= floor.min.z && c.z <= floor.max.z) return true;
+        float overlapX = Mathf.Min(floor.max.x, b.max.x) - Mathf.Max(floor.min.x, b.min.x);
+        float overlapZ = Mathf.Min(floor.max.z, b.max.z) - Mathf.Max(floor.min.z, b.min.z);
+        return overlapX > Epsilon && overlapZ > Epsilon;
     }
 
     public static float HeightAboveFloor(IReadOnlyList<LDPiece> pieces, Bounds b) => b.max.y - FloorTopUnder(pieces, b);
